@@ -547,6 +547,10 @@
 .pin-hit:hover + .pin, .pin-hit.hot + .pin, .comp:hover .pin { fill: #eef3fb; stroke: #4c7fd6; }
 .pin-hit:hover + .pin { r: 4.2; fill: #dbe8ff; stroke: #2563eb; }
 .pin.connected { fill: #dce9df; stroke: #588c6b; }
+.pin.source-plus { fill: #ef4444; stroke: #991b1b; }
+.pin.source-minus { fill: #0f172a; stroke: #64748b; }
+.pin.source-plus.sim-high { fill: #ef4444; stroke: #991b1b; }
+.pin.source-minus.sim-low { fill: #0f172a; stroke: #64748b; }
 .pin.sim-high { fill: #34d399; stroke: #0f8a62; }
 .pin.sim-low { fill: #94a3b8; stroke: #64748b; }
 .wire { fill: none; stroke: #2e9e77; stroke-width: 2.6; stroke-linecap: round; filter: drop-shadow(0 1px 1px rgba(20, 40, 30, .12)); }

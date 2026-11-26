@@ -776,6 +776,11 @@
         const bound = this.bindings[comp.id] && this.bindings[comp.id][p.id];
         const isPending = pending && pending.kind === 'pin' && pending.comp === comp.id && String(pending.pin) === String(p.id);
         let cls = 'pin';
+        if (E.SOURCE_TYPES[comp.type]) {
+          const src = E.SOURCE_TYPES[comp.type];
+          if (String(p.id) === String(src.plus)) cls += ' source-plus';
+          if (String(p.id) === String(src.minus)) cls += ' source-minus';
+        }
         if (st && st.high) cls += ' sim-high';
         else if (st && st.low) cls += ' sim-low';
         if (bound) cls += ' connected';

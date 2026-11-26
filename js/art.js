@@ -387,10 +387,17 @@
       '<text x="-27" y="1" font-family="monospace" font-size="5.4" fill="#064e3b">0.00</text>' +
       '<circle cx="9" cy="-13" r="6" fill="#1e293b" stroke="#64748b" stroke-width=".8"/>' +
       '<path d="M9 -17v4" stroke="#cbd5e1" stroke-width="1.4" stroke-linecap="round"/>' +
-      '<circle cx="22" cy="7" r="3.6" fill="#ef4444" stroke="#7f1d1d" stroke-width=".7"/>' +
-      '<circle cx="10" cy="7" r="3.6" fill="#111827" stroke="#475569" stroke-width=".7"/>' +
-      '<path d="M' + pos.x + ' ' + pos.y + 'H22V7 M' + neg.x + ' ' + neg.y + 'H10V7" stroke="#9aa4b2" stroke-width="1.8"/>' +
-      '<text x="-27" y="16" font-family="monospace" font-size="3.8" fill="#94a3b8">DC POWER</text>' + legs([pos, neg]);
+      legs([pos, neg]) +
+      '<rect x="2.5" y="0.5" width="27" height="14" rx="2.2" fill="#0f172a" stroke="#475569" stroke-width=".7"/>' +
+      '<text x="10" y="-1.2" text-anchor="middle" font-family="monospace" font-size="3.8" font-weight="700" fill="#e2e8f0">GND</text>' +
+      '<text x="22" y="-1.2" text-anchor="middle" font-family="monospace" font-size="3.8" font-weight="700" fill="#fca5a5">V+</text>' +
+      '<circle cx="22" cy="7" r="7.4" fill="#ef4444" opacity=".16"/>' +
+      '<circle cx="22" cy="7" r="5.1" fill="#ef4444" stroke="#7f1d1d" stroke-width=".9"/>' +
+      '<path d="M19.3 7h5.4M22 4.3v5.4" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/>' +
+      '<circle cx="10" cy="7" r="7.4" fill="#94a3b8" opacity=".16"/>' +
+      '<circle cx="10" cy="7" r="5.1" fill="#111827" stroke="#cbd5e1" stroke-width="1"/>' +
+      '<path d="M7.4 7h5.2" stroke="#f8fafc" stroke-width="1.1" stroke-linecap="round"/>' +
+      '<text x="-27" y="16" font-family="monospace" font-size="3.8" fill="#94a3b8">DC POWER</text>';
   }
 
   function icArt(comp, pins) {
