@@ -921,25 +921,34 @@
   Editor.prototype.wirePath = function (a, b, seed, obstacles, stubA, stubB) {
     const p0 = stubA || a;
     const p1 = stubB || b;
-    const route = obstacles && obstacles.length ? this.routeAround(p0, p1, obstacles) : null;
-    if (route) {
-      let d = 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2);
-      if (stubA) d += ' L' + p0.x.toFixed(2) + ' ' + p0.y.toFixed(2);
-      d += this.routeBody(route);
-      if (stubB) d += ' L' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
-      return d;
-    }
     const dx = p1.x - p0.x, dy = p1.y - p0.y;
-    const len = Math.max(1, Math.hypot(dx, dy));
+    const dist = Math.max(1, Math.hypot(dx, dy));
     const n = Number(seed) || 0;
     const bend = ((n % 9) - 4);
-    const nx = -dy / len, ny = dx / len;
-    const off = bend * 2.6;
-    const cx = (p0.x + p1.x) / 2 + nx * off;
-    const cy = (p0.y + p1.y) / 2 + ny * off;
+    let high = null;
+    if (obstacles && obstacles.length && !this.segmentClear(p0, p1, obstacles)) {
+      let top = Infinity;
+      const minX = Math.min(p0.x, p1.x) - 4, maxX = Math.max(p0.x, p1.x) + 4;
+      obstacles.forEach((o) => {
+        if (o.x < maxX && o.x + o.w > minX) top = Math.min(top, o.y);
+      });
+      if (top !== Infinity) high = top - 18;
+    }
     let d = 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2);
     if (stubA) d += ' L' + p0.x.toFixed(2) + ' ' + p0.y.toFixed(2);
-    d += ' Q' + cx.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2);
+    if (high != null) {
+      const cy = high + bend * 2.5;
+      const x1 = p0.x + dx * 0.22;
+      const x2 = p1.x - dx * 0.22;
+      d += ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2);
+    } else {
+      const lift = Math.min(44, 16 + dist * 0.06) + Math.abs(bend) * 2.2;
+      const cy = Math.min(p0.y, p1.y) - lift;
+      const sway = bend * 2.2;
+      const x1 = p0.x + dx * 0.28 + sway;
+      const x2 = p1.x - dx * 0.28 + sway;
+      d += ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2);
+    }
     if (stubB) d += ' L' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
     return d;
   };
