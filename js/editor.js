@@ -2261,9 +2261,21 @@
     const state = this.taskState();
     if (!state || this.mode !== 'editor') { this.$taskSlot.innerHTML = ''; return; }
     const { task, steps, complete } = state;
+    if (complete) this.recordLabCompletion();
     const doneCount = steps.filter((s) => s.done).length;
     const pct = Math.round((doneCount / steps.length) * 100);
     const collapsed = this._taskCollapsed;
+    const currentLevel = this.labId && BBL.LABS ? BBL.LABS.getLevel(this.labId) : null;
+    const next = this.labId && BBL.LABS ? BBL.LABS.nextLevel(this.labId) : null;
+    const nextTrack = next && BBL.LABS ? BBL.LABS.getTrack(next.track) : null;
+    const nextHref = next
+      ? '#/editor?template=' + encodeURIComponent(next.template) + '&lab=' + encodeURIComponent(next.id) + '&task=' + encodeURIComponent(next.taskId)
+      : '#/labs';
+    const nextLabel = !next
+      ? '返回 Lab 练习'
+      : (currentLevel && next.track !== currentLevel.track)
+        ? '进入 ' + nextTrack.label
+        : next.final ? '进入终验' : '下一关';
     this.$taskSlot.innerHTML = `<div class="task-card${collapsed ? ' collapsed' : ''}" id="task-card">
       <div class="task-head" data-action="task-collapse" style="cursor:pointer">
         <div class="task-icon">${svgIcon(complete ? 'check-circle' : 'target')}</div>
@@ -2276,6 +2288,7 @@
         <div class="task-progress"><span style="width:${pct}%"></span></div>
         <div class="task-steps">${steps.map((s, i) => `<div class="task-step ${s.done ? 'done' : (s === steps.find((x) => !x.done) ? 'current' : '')}"><span class="step-dot">${s.done ? svgIcon('check') : i + 1}</span><span>${esc(s.text)}</span></div>`).join('')}</div>
         ${complete ? `<div class="task-success">${svgIcon('sparkle')}<span>${esc(task.success)}</span></div>` : ''}
+        ${complete && this.labId ? `<div class="task-complete-bar"><span>${svgIcon('check-circle')} 已完成 · 进度已保存</span><a class="btn sm primary" href="${nextHref}">${nextLabel} ${svgIcon('arrow-right')}</a></div>` : ''}
         <div class="task-actions">
           ${this.labId ? `<button class="btn sm accent" data-action="lab-guide">${svgIcon('book')} 关卡教程</button>` : ''}
           ${this.taskId === 'arduino-blink'
@@ -2289,9 +2302,7 @@
       this.taskDoneShown = true;
       setTimeout(() => {
         if (!this._mounted || !this.taskState() || !this.taskState().complete) return;
-        if (this.labId && BBL.LABS && !this._labRecorded) {
-          this._labRecorded = true;
-          BBL.LABS.LabProgress.complete(this.labId);
+        if (this.labId) {
           this.toast('关卡完成，进度已记录：' + task.success, 'success', 5600);
         } else {
           this.toast('实验完成：' + task.success, 'success', 5200);
@@ -2300,6 +2311,16 @@
       }, 260);
     }
     if (this.$hud && this.taskState) { /* hud independent */ }
+  };
+
+  Editor.prototype.recordLabCompletion = function () {
+    if (!this.labId || !BBL.LABS) return;
+    const state = this.taskState();
+    if (!state || !state.complete) return;
+    if (!this._labRecorded) {
+      this._labRecorded = true;
+      BBL.LABS.LabProgress.complete(this.labId);
+    }
   };
 
   Editor.prototype.toggleTask = function () {

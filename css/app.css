@@ -317,6 +317,11 @@
   font-size: 11.5px; color: var(--accent-deep); display: flex; gap: 7px; align-items: flex-start; line-height: 1.5;
 }
 .task-success .icon { width: 15px; height: 15px; margin-top: 1px; flex: none; }
+.task-complete-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 7px 8px 7px 10px; border-radius: 8px; background: #f7fafc; border: 1px solid #e6ebf2; }
+.task-complete-bar > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--accent-deep); font-size: 9.5px; font-weight: 650; }
+.task-complete-bar > span .icon { width: 12px; height: 12px; flex: none; }
+.task-complete-bar .btn { margin-left: auto; flex: none; height: 27px; padding: 0 9px; font-size: 10px; }
+.task-complete-bar .btn .icon { width: 11px; height: 11px; }
 
 /* ---------- statusbar ---------- */
 .statusbar {
@@ -784,6 +789,8 @@
   .task-card { width: calc(100% - 86px); top: 46px; right: 10px; }
   .task-card.collapsed .task-head { padding: 10px 11px; }
   .task-card .task-body { max-height: 184px; overflow: auto; }
+  .task-complete-bar { flex-wrap: wrap; gap: 6px; }
+  .task-complete-bar .btn { width: 100%; margin-left: 0; }
   .canvas-tools { top: 42px; left: 8px; }
   .canvas-corner { display: none; }
   .canvas-stage { background-size: 18px 18px, auto; }

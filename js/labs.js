@@ -499,6 +499,10 @@
   function getTrack(id) { return TRACKS.find((t) => t.id === id) || null; }
   function getLevel(id) { return LEVELS.find((l) => l.id === id) || null; }
   function levelsOf(trackId) { return LEVELS.filter((l) => l.track === trackId); }
+  function nextLevel(id) {
+    const i = LEVELS.findIndex((l) => l.id === id);
+    return i >= 0 ? (LEVELS[i + 1] || null) : null;
+  }
 
   const STORAGE_KEY = 'bbl.labs.v4';
   function readProgress() {
@@ -528,5 +532,5 @@
     all() { return readProgress(); }
   };
 
-  BBL.LABS = { tracks: TRACKS, levels: LEVELS, getTrack, getLevel, levelsOf, LabProgress };
+  BBL.LABS = { tracks: TRACKS, levels: LEVELS, getTrack, getLevel, levelsOf, nextLevel, LabProgress };
 })(window.BBL);
