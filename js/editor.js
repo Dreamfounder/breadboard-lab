@@ -2174,22 +2174,52 @@
       const conn = (pin) => s.wires.some((w) => (w.a.kind === 'pin' && w.a.comp === ic.id && String(w.a.pin) === String(pin)) || (w.b.kind === 'pin' && w.b.comp === ic.id && String(w.b.pin) === String(pin)));
       return conn('14') && conn('7');
     });
-    const done = (key) => {
-      switch (key) {
-        case 'parts':
-          if (this.taskId === 'motor') return has('dc-motor') && has('slide-switch') && has('power-supply');
-          if (this.taskId === 'servo') return has('servo') && has('potentiometer');
-          return has('resistor') && has('led') && has('power-supply');
-        case 'wired': return s.wires.length >= 3;
-        case 'led': return lit;
-        case 'button': return lit && comps.some((c) => c.type === 'button' && c.props.pressed);
-        case 'pot': return lit && has('potentiometer');
-        case 'gate-power': return ics.length ? (r ? ics.every((c) => r.components[c.id] && r.components[c.id].powered) : icPoweredWired()) : false;
+      const conn = (compId, pin) => s.wires.some((w) =>
+        (w.a.kind === 'pin' && w.a.comp === compId && String(w.a.pin) === String(pin)) ||
+        (w.b.kind === 'pin' && w.b.comp === compId && String(w.b.pin) === String(pin)));
+      const done = (key) => {
+        switch (key) {
+          case 'parts':
+            if (this.taskId === 'motor') return has('dc-motor') && has('slide-switch') && has('power-supply');
+            if (this.taskId === 'servo') return has('servo') && has('potentiometer');
+            return has('resistor') && has('led') && has('power-supply');
+          case 'wired': return s.wires.length >= 3;
+          case 'led': return lit;
+          case 'button': return lit && comps.some((c) => c.type === 'button' && c.props.pressed);
+          case 'pot': return lit && has('potentiometer');
+          case 'lab-psu': {
+            const psu = comps.find((c) => c.type === 'power-supply' || c.type === 'battery-9v' || c.type === 'coin-cell' || c.type === 'aa-battery');
+            const pins = psu ? (psu.type === 'power-supply' ? ['V+', 'GND'] : [psu.type === 'battery-9v' ? '+' : '+', '-']) : [];
+            return !!psu && pins.every((p) => conn(psu.id, p));
+          }
+          case 'lab-path': {
+            const r = comps.find((c) => c.type === 'resistor');
+            const led = comps.find((c) => c.type === 'led');
+            return !!r && !!led && conn(r.id, '1') && conn(r.id, '2') && conn(led.id, 'a') && conn(led.id, 'k');
+          }
+          case 'lab-power': return ics.length > 0 && ics.every((ic) => conn(ic.id, '14') && conn(ic.id, '7'));
+          case 'lab-inputs': {
+            const switches = comps.filter((c) => c.type === 'slide-switch');
+            const switchOk = switches.length > 0 && switches.every((sw) => conn(sw.id, '2'));
+            const unusedOk = ics.every((ic) => {
+              if (ic.type !== 'ic74hc20' && ic.type !== 'ic74hc21') return true;
+              return conn(ic.id, '4') && conn(ic.id, '5');
+            });
+            return switchOk && unusedOk;
+          }
+          case 'lab-output':
+            if (!ics.length) return false;
+            return ics.every((ic) => {
+              const info = E.IC_GATES[ic.type];
+              return info && info.gates.some((g) => conn(ic.id, String(g.y)));
+            });
+          case 'lab-run': return !!(this.simRunning && lit);
+          case 'gate-power': return ics.length ? (r ? ics.every((c) => r.components[c.id] && r.components[c.id].powered) : icPoweredWired()) : false;
         case 'both-high': return switchVals.length >= 2 && switchVals.every((v) => v === 0);
         case 'any-high': return switchVals.some((v) => v === 0);
         case 'switch-low': return switchVals.some((v) => v === 1);
         case 'both-low': return switchVals.length >= 2 && switchVals.every((v) => v === 1);
-        case 'and-led': case 'or-led': case 'not-led': case 'nor-led': case 'sum-lit': case 'lab-output': return lit;
+        case 'and-led': case 'or-led': case 'not-led': case 'nor-led': case 'sum-lit': return lit;
         case 'carry-lit': return !!(r && r.leds.some((l) => l.compId === 'led2' && l.on && l.current > 0.0005));
         case 'arduino-part': return !!this.findArduino();
         case 'code-open': return this.codeOpen || this.codeRunning;

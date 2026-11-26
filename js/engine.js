@@ -408,6 +408,8 @@
     }
     wire(s, 'r1', '2', 'led1', 'a', 'green');
     wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
+    // Starter kit: parts are placed, but every wire is intentionally removed.
+    s.wires = [];
     return s;
   }
 
@@ -418,9 +420,7 @@
     const r = createComponent('resistor', 256, 388, { resistance: 1000 }); r.id = 'r1';
     const led = createComponent('led', 347, 401, { color: 'red' }); led.id = 'led1';
     s.components.push(psu, r, led);
-    wire(s, 'psu1', 'V+', 'r1', '1', 'red');
-    wire(s, 'r1', '2', 'led1', 'a', 'green');
-    wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
+    s.wires = [];
     return s;
   };
   Templates['lab01-nand'] = function () { return labChipDemo('ic74hc20', 'Lab 01 · 74HC20 NAND', 'lab01-nand', { fourInput: true, ledColor: 'red' }); };
@@ -573,6 +573,7 @@
     wire(s, 'and1', '3', 'r2', '1', 'green');
     wire(s, 'r2', '2', 'led2', 'a', 'green');
     wire(s, 'led2', 'k', 'psu1', 'GND', 'black');
+    s.wires = [];
     return s;
   };
 
@@ -621,6 +622,7 @@
     wire(s, 'or1', '3', 'rCout', '1', 'green');
     wire(s, 'rCout', '2', 'ledCout', 'a', 'green');
     wire(s, 'ledCout', 'k', 'psu1', 'GND', 'black');
+    s.wires = [];
     return s;
   };
 
@@ -1343,90 +1345,97 @@
     'lab01-led': {
       kicker: 'Lab 01 · 关卡 01',
       title: '电源、面包板与 LED',
-      summary: '完成 5V → 1kΩ → LED → GND，并理解 Vcc、GND 和 LED 极性。',
+      summary: '元件已经摆在面包板上，导线全部断开。从电源开始，自己把回路接起来。',
       steps: [
-        { key: 'parts', text: '找到 5V 电源、1kΩ 电阻和 LED' },
-        { key: 'wired', text: '让电流从 V+ 经过电阻和 LED 回到 GND' },
-        { key: 'led', text: '运行仿真，让 LED 安全点亮' }
+        { key: 'lab-psu', text: '把电源 V+ 和 GND 分别接出来，先不要直接短接' },
+        { key: 'lab-path', text: '用 1kΩ 电阻连接 V+ 和 LED 阳极，再将阴极接回 GND' },
+        { key: 'lab-run', text: '运行仿真，自己确认 LED 是否点亮' }
       ],
-      success: 'LED 亮了！1kΩ 把电流限制在约 3 mA，这就是 Lab 01 的第一步。'
+      success: '回路接通了。现在回到关卡页，把实验观察记录下来；下一关开始接芯片。'
     },
     'lab01-nand': {
       kicker: 'Lab 01 · 关卡 02',
       title: '74HC20 · NAND',
-      summary: '4 输入 NAND 当作 2 输入使用：C、D 接高，验证 A/B 真值表。',
+      summary: '芯片、开关、电阻和 LED 都已就位，但一根线都没接。按提示自己完成。',
       steps: [
-        { key: 'gate-power', text: '给 74HC20 接好 14 脚 VCC 与 7 脚 GND' },
-        { key: 'wired', text: 'A/B 接开关，C/D 接 VCC，输出经 1kΩ 接 LED' },
-        { key: 'lab-output', text: '运行仿真，按真值表切换 A/B 并观察输出' }
+        { key: 'lab-power', text: '把 74HC20 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: '把 A/B 开关接到输入脚；C/D 该接什么？先想清楚再接' },
+        { key: 'lab-output', text: '把输出脚经 1kΩ 接 LED，LED 阴极回 GND' },
+        { key: 'lab-run', text: '运行仿真，切换 A/B，自己观察并记录输出' }
       ],
-      success: '只有 A=1、B=1 时输出才为 0；这就是 NAND。记得 C/D 必须接高。'
+      success: '电路开始响应了。回到关卡页，把真值表自己填完，再用“检查我的真值表”验证。'
     },
     'lab01-not': {
       kicker: 'Lab 01 · 关卡 03',
       title: '74HC04 · NOT',
-      summary: '输入低电平时 LED 亮，输入高电平时 LED 灭。',
+      summary: '元件已摆好，导线全部断开。先接线，再自己验证反相关系。',
       steps: [
-        { key: 'gate-power', text: '给 74HC04 接好 14 脚 VCC 与 7 脚 GND' },
-        { key: 'wired', text: '开关接 1A，1Y 经 1kΩ 接 LED' },
-        { key: 'lab-output', text: '运行仿真，比较输入 0 与 1 时的输出' }
+        { key: 'lab-power', text: '把 74HC04 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: '把开关公共端接到 1A 输入' },
+        { key: 'lab-output', text: '把 1Y 输出经 1kΩ 接 LED，LED 阴极回 GND' },
+        { key: 'lab-run', text: '运行仿真，切换输入，自己观察输出' }
       ],
-      success: '输入 0，输出 1；输入 1，输出 0。NOT 门完成了反相。'
+      success: '输入改变时输出也跟着变。回到关卡页，自己写出两行真值表并检查。'
     },
     'lab01-and': {
       kicker: 'Lab 01 · 关卡 04',
       title: '74HC21 · AND',
-      summary: '4 输入 AND 的 C/D 接高，A/B 同时为 1 时输出才为 1。',
+      summary: '先接电源和输入，再想清楚 4 输入 AND 的多余输入怎么处理。',
       steps: [
-        { key: 'gate-power', text: '给 74HC21 接好 14 脚 VCC 与 7 脚 GND' },
-        { key: 'wired', text: 'A/B 接开关，C/D 接 VCC，输出经 1kΩ 接 LED' },
-        { key: 'lab-output', text: '运行仿真，验证只有 11 时 LED 亮' }
+        { key: 'lab-power', text: '把 74HC21 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: 'A/B 接开关；未使用的 C/D 应该接高还是接低？' },
+        { key: 'lab-output', text: '把输出脚经 1kΩ 接 LED，LED 阴极回 GND' },
+        { key: 'lab-run', text: '运行仿真，切换 A/B，记录输出' }
       ],
-      success: '1 · 1 = 1。C/D 接高保证了 4 输入 AND 只受 A/B 控制。'
+      success: '接线完成，AND 已经开始响应。回到关卡页，自己补完真值表。'
     },
     'lab01-xor': {
       kicker: 'Lab 01 · 关卡 05',
       title: '74HC86 · XOR',
-      summary: '两个输入不同时输出 1，相同时输出 0。',
+      summary: '先自己接，再看输出；不要急着看结论，用输入组合验证。',
       steps: [
-        { key: 'gate-power', text: '给 74HC86 接好 14 脚 VCC 与 7 脚 GND' },
-        { key: 'wired', text: 'A/B 接开关，1Y 经 1kΩ 接 LED' },
-        { key: 'lab-output', text: '运行仿真，验证 01 和 10 时 LED 亮' }
+        { key: 'lab-power', text: '把 74HC86 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: '把 A/B 开关接到 XOR 的第 1、2 脚' },
+        { key: 'lab-output', text: '把第 3 脚输出经 1kΩ 接 LED' },
+        { key: 'lab-run', text: '运行仿真，试完四种输入组合' }
       ],
-      success: '不同为 1，相同为 0。XOR 是半加器求和的核心。'
+      success: 'XOR 已经有反应了。回到关卡页，凭自己的观察填写真值表。'
     },
     'lab01-or': {
       kicker: 'Lab 01 · 关卡 06',
       title: '74HC32 · OR',
-      summary: '只要有一个输入为 1，输出就为 1。',
+      summary: '最后一个门电路。按步骤接线，自己总结 OR 和 XOR 的区别。',
       steps: [
-        { key: 'gate-power', text: '给 74HC32 接好 14 脚 VCC 与 7 脚 GND' },
-        { key: 'wired', text: 'A/B 接开关，1Y 经 1kΩ 接 LED' },
-        { key: 'lab-output', text: '运行仿真，验证 01、10、11 时 LED 亮' }
+        { key: 'lab-power', text: '把 74HC32 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: '把 A/B 开关接到第 1、2 脚' },
+        { key: 'lab-output', text: '把第 3 脚输出经 1kΩ 接 LED' },
+        { key: 'lab-run', text: '运行仿真，试完四种输入组合' }
       ],
-      success: 'A + B = 1，只要有一个条件成立，输出就成立。'
+      success: 'Lab 01 的五个门都做完了。回到关卡页，自己把五张表整理进报告。'
     },
     'lab02-half': {
       kicker: 'Lab 02 · 关卡 01',
       title: '半加器 Half Adder',
-      summary: 'XOR 求和，AND 进位，验证 1 + 1 = 10。',
+      summary: '两片芯片已经放好，但连线全断。先自己想：Sum 和 Carry 分别该用哪个门？',
       steps: [
-        { key: 'gate-power', text: '给 74HC86 与 74HC08 接好电源和地' },
-        { key: 'wired', text: 'A/B 同时接到 XOR 和 AND 的输入' },
-        { key: 'sum-lit', text: '运行仿真，验证四行半加器真值表' }
+        { key: 'lab-power', text: '给 74HC86 和 74HC08 接好 V+ 与 GND' },
+        { key: 'lab-inputs', text: '把 A/B 同时接到两个门的输入' },
+        { key: 'lab-output', text: '两个输出分别经 1kΩ 接 LED' },
+        { key: 'lab-run', text: '运行仿真，试完四组输入，再记录 Sum/Carry' }
       ],
-      success: 'Sum = A ⊕ B，Carry = A · B。你已经完成半加器。'
+      success: '半加器已经能响应输入。回到关卡页，自己把 Sum 和 Carry 填完并检查。'
     },
     'lab02-full': {
       kicker: 'Lab 02 · 关卡 02',
       title: '全加器 Full Adder',
-      summary: '两个 XOR、两个 AND、一个 OR，把 A + B + Cin 变成 Sum 和 Cout。',
+      summary: '三片芯片与输入/输出元件已就位，导线全部断开。这是本 Lab 的最终挑战。',
       steps: [
-        { key: 'gate-power', text: '给 74HC86、74HC08、74HC32 接好电源和地' },
-        { key: 'wired', text: '按两级半加器结构连接 S1、C1、C2 与 OR' },
-        { key: 'lab-output', text: '运行仿真，验证 8 行全加器真值表' }
+        { key: 'lab-power', text: '给 74HC86、74HC08、74HC32 都接好 V+ 与 GND' },
+        { key: 'lab-inputs', text: '先搭第一级 A⊕B、A·B，再把 S1 和 Cin 接入第二级' },
+        { key: 'lab-output', text: 'Sum 与 Cout 分别经 1kΩ 接 LED；检查两个进位是否经 OR 合并' },
+        { key: 'lab-run', text: '运行仿真，自己验证八组输入并填写真值表' }
       ],
-      success: '全加器完成！Sum 与 Cout 正确，你已经能级联出多位加法器。'
+      success: '全加器接通了。回到关卡页，把八行真值表自己填完，用检查功能确认。'
     }
   };
 

@@ -540,12 +540,57 @@
     }).join('') + '</div>';
   }
 
-  function labTruthHtml(truth) {
+  function labTruthHtml(truth, levelId) {
     if (!truth) return '';
-    return '<div class="lab-table-wrap"><table class="lab-table"><thead><tr>' +
+    const inputCount = truth.inputs || truth.headers.length - 1;
+    const outputs = truth.headers.length - inputCount;
+    return '<div class="lab-table-wrap lab-truth" data-lab-truth="' + esc(levelId || '') + '"><table class="lab-table"><thead><tr>' +
       truth.headers.map((h) => '<th>' + esc(h) + '</th>').join('') +
-      '</tr></thead><tbody>' + truth.rows.map((row) => '<tr>' + row.map((cell, i) => '<td' + (i === row.length - 1 ? ' class="result"' : '') + '>' + esc(cell) + '</td>').join('') + '</tr>').join('') + '</tbody></table>' +
+      '</tr></thead><tbody>' + truth.rows.map((row, ri) => '<tr data-truth-row="' + ri + '">' +
+        row.slice(0, inputCount).map((cell) => '<td>' + esc(cell) + '</td>').join('') +
+        row.slice(inputCount, inputCount + outputs).map((cell, oi) => '<td class="result blank"><select class="lab-truth-select" data-truth-select="' + ri + ':' + oi + '" aria-label="第 ' + (ri + 1) + ' 行输出"><option value="">?</option><option value="0">0</option><option value="1">1</option></select></td>').join('') +
+      '</tr>').join('') + '</tbody></table>' +
+      '<div class="lab-truth-actions"><button class="btn sm" data-truth-check="' + esc(levelId || '') + '">' + svgIcon('check-circle') + ' 检查我的真值表</button><button class="btn sm ghost" data-truth-hint="' + esc(levelId || '') + '">' + svgIcon('lightbulb') + ' 给我一个提示</button></div>' +
+      '<div class="lab-truth-feedback" aria-live="polite"></div>' +
+      '<div class="lab-truth-hint" hidden>' + svgIcon('lightbulb') + '<span>' + esc(truth.hint || '先观察输入组合，再判断输出。') + '</span></div>' +
       (truth.note ? '<p class="lab-table-note">' + esc(truth.note) + '</p>' : '') + '</div>';
+  }
+
+  function bindLabTruth(root, level) {
+    if (!root || !level || !level.truth) return;
+    const box = root.querySelector('.lab-truth');
+    if (!box) return;
+    const inputCount = level.truth.inputs || level.truth.headers.length - 1;
+    const check = box.querySelector('[data-truth-check]');
+    const hintBtn = box.querySelector('[data-truth-hint]');
+    if (check) check.addEventListener('click', () => {
+      const selects = Array.from(box.querySelectorAll('[data-truth-select]'));
+      let filled = 0, wrong = 0;
+      selects.forEach((sel) => {
+        const [ri, oi] = sel.getAttribute('data-truth-select').split(':').map(Number);
+        const tr = box.querySelector('[data-truth-row="' + ri + '"]');
+        const answer = level.truth.rows[ri][inputCount + oi];
+        tr.classList.remove('correct', 'wrong');
+        if (sel.value !== '') filled++;
+        if (sel.value !== '' && sel.value !== String(answer)) { wrong++; tr.classList.add('wrong'); }
+        else if (sel.value !== '') tr.classList.add('correct');
+      });
+      const fb = box.querySelector('.lab-truth-feedback');
+      if (filled < selects.length) {
+        fb.className = 'lab-truth-feedback warn';
+        fb.textContent = '还有格子没填。可以先填完，再检查。';
+      } else if (wrong) {
+        fb.className = 'lab-truth-feedback error';
+        fb.textContent = '有 ' + wrong + ' 行还不对。回到原理或点“给我一个提示”，再想一想。系统不会直接显示答案。';
+      } else {
+        fb.className = 'lab-truth-feedback success';
+        fb.textContent = '全对！现在去实验台亲手验证一次，再截图放进实验报告。';
+      }
+    });
+    if (hintBtn) hintBtn.addEventListener('click', () => {
+      const hint = box.querySelector('.lab-truth-hint');
+      hint.hidden = !hint.hidden;
+    });
   }
 
   function labGuideHtml(level) {
@@ -553,9 +598,8 @@
       '<div class="lab-guide-goal">' + svgIcon('target') + '<div><b>本关目标</b><p>' + esc(level.objective) + '</p></div></div>' +
       '<h3 class="lab-guide-title">操作步骤</h3>' +
       '<ol class="lab-guide-steps">' + level.steps.map((s) => '<li><div><b>' + esc(s.title) + '</b><span>' + esc(s.body) + '</span></div></li>').join('') + '</ol>' +
-      (level.truth ? '<h3 class="lab-guide-title">真值表</h3>' + labTruthHtml(level.truth) : '') +
-      '<h3 class="lab-guide-title">接线检查</h3>' +
-      '<div class="lab-guide-wiring">' + level.wiring.map((w) => '<div><span>' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span>' + esc(w.to) + '</span></div>').join('') + '</div>' +
+      (level.truth ? '<h3 class="lab-guide-title">真值表</h3>' + labTruthHtml(level.truth, level.id) : '') +
+      '<details class="lab-guide-hints"><summary>' + svgIcon('branch') + ' 需要接线提示时展开</summary><div class="lab-guide-wiring">' + level.wiring.map((w) => '<div><span>' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span>' + esc(w.to) + '</span></div>').join('') + '</div></details>' +
       '<div class="lab-guide-tip">' + svgIcon('lightbulb') + '<span><b>常见错误：</b>' + esc(level.pitfalls[0]) + '</span></div>' +
       '</div>';
   }
@@ -565,14 +609,15 @@
       const level = BBL.LABS.getLevel(levelId);
       if (!level) return;
       const track = BBL.LABS.getTrack(level.track);
-      BBL.ui.modal({
+      const modal = BBL.ui.modal({
         title: 'Level ' + level.number + ' · ' + level.title,
         subtitle: track.label + ' · ' + track.title,
         wide: true,
         body: labGuideHtml(level),
         footer: '<a class="btn" href="#/labs/' + level.id + '" data-close>' + svgIcon('book') + ' 完整关卡页</a><button class="btn primary" data-close>继续实验</button>'
       });
-      document.querySelectorAll('.modal-backdrop [data-close]').forEach((b) => {
+      bindLabTruth(modal, level);
+      modal.querySelectorAll('[data-close]').forEach((b) => {
         b.addEventListener('click', (e) => { if (b.tagName !== 'A') { e.preventDefault(); BBL.ui.closeModal(); } });
       });
     };
@@ -622,19 +667,21 @@
       '<div class="lab-detail-card"><div class="lab-detail-card-head"><span>本关元件</span><span class="pill">' + track.label + '</span></div>' + labPartsHtml(level) + '<div class="lab-detail-card-foot"><span>' + svgIcon('info') + ' 进入实验台后按任务卡操作</span></div></div></div>' +
       '</div></section>' +
       '<div class="container lab-detail-body"><div class="lab-detail-main">' +
+      '<div class="lab-start-banner">' + svgIcon('branch') + '<div><b>本关从零开始</b><span>芯片、开关、电阻和 LED 已经摆在面包板上，但<strong>所有导线都是断开的</strong>。请按任务卡自己接线；卡住时再展开下方的接线提示。</span></div></div>' +
       '<section class="lab-section"><div class="lab-section-head"><span>01</span><h2>原理背景</h2></div><div class="lab-prose">' + level.background.map((p) => '<p>' + esc(p) + '</p>').join('') + '</div></section>' +
       '<section class="lab-section"><div class="lab-section-head"><span>02</span><h2>操作步骤</h2></div><ol class="lab-steps">' + level.steps.map((s, i) => '<li><span class="lab-step-num">' + (i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p>' + esc(s.body) + '</p></div></li>').join('') + '</ol></section>' +
-      '<section class="lab-section"><div class="lab-section-head"><span>03</span><h2>接线表</h2></div><div class="lab-wiring-table">' + level.wiring.map((w) => '<div class="lab-wire-row"><span class="from">' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span class="to">' + esc(w.to) + '</span><em>' + esc(w.why) + '</em></div>').join('') + '</div></section>' +
-      (level.truth ? '<section class="lab-section"><div class="lab-section-head"><span>04</span><h2>' + esc(level.truth.title) + '</h2></div>' + labTruthHtml(level.truth) + '<div class="lab-table-tip">' + svgIcon('lightbulb') + ' 在实验台里逐行切换输入，把每次 LED 的亮/灭与表中输出对照。</div></section>' : '') +
+      '<section class="lab-section"><div class="lab-section-head"><span>03</span><h2>接线提示</h2></div><p class="lab-hint-intro">先自己尝试。确实需要时再展开逐线提示。</p><details class="lab-detail-hints"><summary>' + svgIcon('branch') + ' 展开接线提示</summary><div class="lab-wiring-table">' + level.wiring.map((w) => '<div class="lab-wire-row"><span class="from">' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span class="to">' + esc(w.to) + '</span><em>' + esc(w.why) + '</em></div>').join('') + '</div></details></section>' +
+      (level.truth ? '<section class="lab-section"><div class="lab-section-head"><span>04</span><h2>' + esc(level.truth.title) + '</h2></div>' + labTruthHtml(level.truth, level.id) + '<div class="lab-table-tip">' + svgIcon('lightbulb') + ' 先自己填写输出，再点“检查我的真值表”。系统只会告诉你哪几行不对，不会直接给答案。</div></section>' : '') +
       '<section class="lab-section"><div class="lab-section-head"><span>05</span><h2>常见错误</h2></div><div class="lab-pitfalls">' + level.pitfalls.map((p) => '<div>' + svgIcon('warning') + '<span>' + esc(p) + '</span></div>').join('') + '</div></section>' +
       '<section class="lab-section"><div class="lab-section-head"><span>06</span><h2>完成检查</h2></div><div class="lab-checks">' + level.checkpoints.map((c) => '<div>' + svgIcon('check-circle') + '<span>' + esc(c) + '</span></div>').join('') + '</div><div class="lab-submit"><b>提交建议</b><p>' + esc(level.submit) + '</p></div></section>' +
       '<div class="lab-pager">' + (prev ? '<a href="#/labs/' + prev.id + '"><span>上一关</span><b>' + esc(prev.title) + '</b></a>' : '<span></span>') + (next ? '<a class="next" href="#/labs/' + next.id + '"><span>下一关</span><b>' + esc(next.title) + '</b></a>' : '') + '</div>' +
       '</div>' +
-      '<aside class="lab-detail-side"><div class="lab-side-card"><div class="lab-side-label">本关任务</div><div class="lab-side-progress"><div><b>' + (complete ? '已完成' : '待完成') + '</b><span>' + track.label + ' · Level ' + level.number + '</span></div>' + (complete ? '<i class="done">' + svgIcon('check') + '</i>' : '<i>' + level.number + '</i>') + '</div><a class="btn primary block" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><p class="lab-side-note">' + svgIcon('info') + ' 完成实验台任务卡后自动记录。电路可以自由修改。</p><button class="btn ghost block" data-lab-guide="' + level.id + '">' + svgIcon('keyboard') + ' 在弹窗中查看步骤</button></div>' +
+      '<aside class="lab-detail-side"><div class="lab-side-card"><div class="lab-side-label">本关任务</div><div class="lab-side-progress"><div><b>' + (complete ? '已完成' : '待完成') + '</b><span>' + track.label + ' · Level ' + level.number + '</span></div>' + (complete ? '<i class="done">' + svgIcon('check') + '</i>' : '<i>' + level.number + '</i>') + '</div><a class="btn primary block" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><p class="lab-side-note">' + svgIcon('info') + ' 完成实验台任务卡后自动记录。元件已摆好、导线全部断开；完成接线并运行后才会记录本关。</p><button class="btn ghost block" data-lab-guide="' + level.id + '">' + svgIcon('keyboard') + ' 在弹窗中查看步骤</button></div>' +
       '<div class="lab-side-card"><div class="lab-side-label">实验材料</div>' + labPartsHtml(level) + '</div>' +
       '<div class="lab-side-card source"><div class="lab-side-label">来源</div><p>' + esc(track.course) + '</p><b>' + esc(track.source) + '</b><span class="lab-source-note">按课程 Lab 内容改编为可交互关卡</span></div>' +
       '</aside></div></div>' + footerHTML();
     attachFooter(mount);
+    bindLabTruth(mount, level);
     mount.querySelectorAll('[data-lab-guide]').forEach((b) => b.addEventListener('click', () => BBL.ui.labGuide(b.getAttribute('data-lab-guide'))));
   };
 

@@ -143,6 +143,32 @@
 .lab-table td { padding: 8px 12px; border-bottom: 1px solid #f2f4f8; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
 .lab-table tr:last-child td { border-bottom: 0; }
 .lab-table td.result { color: var(--brand); font-weight: 700; background: #fbfdff; }
+.lab-table td.blank { padding: 4px 8px; background: #fbfdff; }
+.lab-truth-select { height: 24px; min-width: 52px; border: 1px solid #d7e2f2; border-radius: 5px; background: #fff; color: var(--ink); font-family: var(--font-mono); font-size: 10px; padding: 0 6px; outline: none; }
+.lab-truth-select:focus { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+.lab-table tr.correct td { background: #f3fbf7; }
+.lab-table tr.wrong td { background: #fff7f3; }
+.lab-truth-actions { display: flex; flex-wrap: wrap; gap: 7px; padding: 9px 10px; border-top: 1px solid #f0f3f7; background: #fbfcfe; }
+.lab-truth-feedback { display: none; padding: 0 10px; font-size: 10px; line-height: 1.6; }
+.lab-truth-feedback.warn, .lab-truth-feedback.error, .lab-truth-feedback.success { display: block; padding: 8px 10px; }
+.lab-truth-feedback.warn { color: #92500a; background: var(--amber-soft); }
+.lab-truth-feedback.error { color: #9f3d2c; background: #fff5f1; }
+.lab-truth-feedback.success { color: #246b4c; background: #f1fbf6; }
+.lab-truth-hint { display: flex; gap: 6px; align-items: flex-start; padding: 9px 11px; background: #f5f8fd; border-top: 1px solid #e9eff7; font-size: 9.5px; line-height: 1.6; color: var(--muted); }
+.lab-truth-hint .icon { width: 12px; height: 12px; flex: none; margin-top: 1px; color: var(--brand); }
+.lab-truth-hint[hidden] { display: none; }
+.lab-guide-hints .lab-guide-wiring { padding: 0 10px 9px; }
+.lab-hint-intro { margin-bottom: 8px; font-size: 10.5px; color: var(--muted); line-height: 1.6; }
+.lab-start-banner { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 22px; padding: 13px 14px; border-radius: 9px; background: #f2f8ff; border: 1px solid #dce9fb; }
+.lab-start-banner > .icon { width: 17px; height: 17px; flex: none; color: var(--brand); margin-top: 1px; }
+.lab-start-banner b { display: block; font-size: 10px; color: var(--brand); letter-spacing: .03em; }
+.lab-start-banner span { display: block; margin-top: 2px; font-size: 10.5px; line-height: 1.65; color: var(--muted); }
+.lab-start-banner strong { color: var(--ink); }
+.lab-detail-hints, .lab-guide-hints { margin-top: 8px; border: 1px solid #e2e9f3; border-radius: 8px; background: #fbfcfe; }
+.lab-detail-hints summary, .lab-guide-hints summary { display: flex; align-items: center; gap: 5px; padding: 9px 11px; cursor: pointer; font-size: 10px; font-weight: 600; color: var(--brand); list-style: none; }
+.lab-detail-hints summary::-webkit-details-marker, .lab-guide-hints summary::-webkit-details-marker { display: none; }
+.lab-detail-hints summary .icon, .lab-guide-hints summary .icon { width: 12px; height: 12px; }
+.lab-detail-hints .lab-wiring-table { border: 0; border-top: 1px solid #eef1f6; border-radius: 0; }
 .lab-table-note { padding: 8px 12px; margin: 0; font-size: 9px; line-height: 1.6; color: var(--muted-2); background: #fafcff; border-top: 1px solid #f0f3f7; }
 .lab-table-tip { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; padding: 8px 10px; border-radius: 7px; background: var(--amber-soft); border: 1px solid #fdebc8; font-size: 9.5px; line-height: 1.6; color: #92500a; }
 .lab-table-tip .icon { width: 12px; height: 12px; flex: none; margin-top: 1px; }
