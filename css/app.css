@@ -562,6 +562,13 @@
 .pin.sim-high { fill: #34d399; stroke: #0f8a62; }
 .pin.sim-low { fill: #94a3b8; stroke: #64748b; }
 .wire { fill: none; stroke: #2e9e77; stroke-width: 2.6; stroke-linecap: round; filter: drop-shadow(0 1px 1px rgba(20, 40, 30, .12)); }
+.wire-halo { fill: none; stroke: #f8fafc; stroke-width: 4.6; stroke-linecap: round; opacity: .42; }
+.wire-group:hover .wire-halo { stroke-width: 6.2; opacity: .8; }
+.wire-group:hover .wire { stroke-width: 4; filter: drop-shadow(0 1px 2px rgba(20, 40, 30, .22)); }
+.wire { transition: opacity .14s, stroke-width .14s; }
+#layer-wires.hover-focus .wire-group:not(.hovered) .wire { opacity: .13; }
+#layer-wires.hover-focus .wire-group:not(.hovered) .wire-halo { opacity: 0; }
+#layer-wires.hover-focus .wire-group.hovered .wire { stroke-width: 4.2; opacity: 1; }
 .wire-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .wire.sel { stroke: #2563eb; stroke-width: 3.2; }
 .wire.power { stroke: #e05252; }

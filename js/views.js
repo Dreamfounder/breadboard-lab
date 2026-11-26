@@ -85,7 +85,7 @@
     const rows = [
       ['选择工具', 'V'], ['连线工具', 'W'], ['删除工具', 'X'],
       ['删除选中', 'Delete / Backspace'], ['撤销', 'Ctrl + Z'], ['重做', 'Ctrl + Shift + Z'],
-      ['复制元件', 'Ctrl + D'], ['旋转 90°', 'R'], ['开始 / 暂停模拟', 'S'], ['缩放', '滚轮 / + / −'], ['适应画布', '0'], ['取消连线 / 关闭面板', 'Esc']
+      ['复制元件', 'Ctrl + D'], ['旋转 90°', 'R'], ['开始 / 暂停模拟', 'S'], ['缩放', '滚轮 / + / −'], ['适应画布', '0'], ['突出显示一根导线', '鼠标悬停'], ['取消连线 / 关闭面板', 'Esc']
     ];
     const body = '<div class="help-grid">' +
       '<div><h3 style="font-size:14px;margin-bottom:10px">画布快捷键</h3><div style="display:flex;flex-direction:column;gap:7px">' +
