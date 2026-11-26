@@ -12,7 +12,7 @@
       course: 'WIX1003 Computer Systems & Organization',
       source: 'Lab 01: Electronics',
       color: 'blue',
-      intro: '从电源、面包板和 LED 开始，再逐一验证 74HC20、74HC04、74HC21、74HC86、74HC32 的逻辑功能，完成实验报告里的真值表。每一关的电路会先接好作为参考；最后在空白画布上完成终验。',
+      intro: '从电源、面包板和 LED 开始，再逐一验证 74HC20、74HC04、74HC21、74HC86、74HC32 的逻辑功能，完成实验报告里的真值表。练习关会把元件摆好，但导线全部断开；最后在空白画布上完成终验。',
       goals: ['认识 Vcc / GND 与逻辑电平', '会看 DIP-14 芯片引脚编号', '用 1kΩ 电阻保护 LED', '独立验证 5 种逻辑门', '从空白画布完成一门终验']
     },
     {
@@ -23,7 +23,7 @@
       course: 'WIX1003 Computer Systems & Organization',
       source: 'Lab 02: Combinational Circuit Design',
       color: 'green',
-      intro: '把 XOR、AND、OR 组合成半加器与全加器，理解 Sum / Carry 的来处，并验证完整的真值表。先看参考电路，最后在空白画布上独立搭建全加器。',
+      intro: '把 XOR、AND 和 OR 组合成半加器与全加器，理解 Sum / Carry 的来处，并验证完整的真值表。练习关的元件会摆好、导线全断；最后在空白画布上独立搭建全加器。',
       goals: ['用 XOR + AND 构造半加器', '用两个半加器 + OR 构造全加器', '理解进位链 Carry', '记录并提交真值表', '从空白画布搭建全加器']
     }
   ];
@@ -500,7 +500,7 @@
   function getLevel(id) { return LEVELS.find((l) => l.id === id) || null; }
   function levelsOf(trackId) { return LEVELS.filter((l) => l.track === trackId); }
 
-  const STORAGE_KEY = 'bbl.labs.v3';
+  const STORAGE_KEY = 'bbl.labs.v4';
   function readProgress() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch (e) { return {}; }
   }

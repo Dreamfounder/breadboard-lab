@@ -408,6 +408,7 @@
     }
     wire(s, 'r1', '2', 'led1', 'a', 'green');
     wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
+    s.wires = [];
     return s;
   }
 
@@ -418,9 +419,7 @@
     const r = createComponent('resistor', 256, 388, { resistance: 1000 }); r.id = 'r1';
     const led = createComponent('led', 347, 401, { color: 'red' }); led.id = 'led1';
     s.components.push(psu, r, led);
-    wire(s, 'psu1', 'V+', 'r1', '1', 'red');
-    wire(s, 'r1', '2', 'led1', 'a', 'green');
-    wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
+    s.wires = [];
     return s;
   };
   Templates['lab01-nand'] = function () { return labChipDemo('ic74hc20', 'Lab 01 · 74HC20 NAND', 'lab01-nand', { fourInput: true, ledColor: 'red' }); };
@@ -573,6 +572,7 @@
     wire(s, 'and1', '3', 'r2', '1', 'green');
     wire(s, 'r2', '2', 'led2', 'a', 'green');
     wire(s, 'led2', 'k', 'psu1', 'GND', 'black');
+    s.wires = [];
     return s;
   };
 
@@ -621,6 +621,7 @@
     wire(s, 'or1', '3', 'rCout', '1', 'green');
     wire(s, 'rCout', '2', 'ledCout', 'a', 'green');
     wire(s, 'ledCout', 'k', 'psu1', 'GND', 'black');
+    s.wires = [];
     return s;
   };
 
