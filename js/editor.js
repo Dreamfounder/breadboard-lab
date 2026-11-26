@@ -115,6 +115,7 @@
     this.simResult = null;
     this.pending = null;
     this.cursor = null;
+    this.hoverWireId = null;
     this.drag = null;
     this.libDrag = null;
     this.codeOpen = false;
@@ -314,8 +315,9 @@
                 ${svgDefs()}
                 <g id="viewport">
                   <g id="layer-board"></g>
-                  <g id="layer-comps"></g>
                   <g id="layer-wires"></g>
+                  <g id="layer-comps"></g>
+                  <g id="layer-wire-focus"></g>
                   <g id="layer-pins"></g>
                   <g id="layer-draft"></g>
                 </g>
@@ -417,6 +419,7 @@
     this.$viewport = this.mount.querySelector('#viewport');
     this.$layerBoard = this.mount.querySelector('#layer-board');
     this.$layerWires = this.mount.querySelector('#layer-wires');
+    this.$layerWireFocus = this.mount.querySelector('#layer-wire-focus');
     this.$layerComps = this.mount.querySelector('#layer-comps');
     this.$layerPins = this.mount.querySelector('#layer-pins');
     this.$layerDraft = this.mount.querySelector('#layer-draft');
@@ -463,6 +466,11 @@
     this.$root.addEventListener('click', function (e) { self.onClick(e); }, { signal: signal });
     this.$root.addEventListener('pointerdown', function (e) { self.onPointerDown(e); }, { signal: signal });
     window.addEventListener('pointermove', function (e) { self.onPointerMove(e); }, { signal: signal, passive: false });
+    this.$stage.addEventListener('pointerleave', function () {
+      self.hoverWireId = null;
+      if (self.$layerWires) self.$layerWires.classList.remove('hover-focus');
+      if (self.$layerWireFocus) self.renderWireFocus();
+    }, { signal: signal });
     window.addEventListener('pointerup', function (e) { self.onPointerUp(e); }, { signal: signal });
     window.addEventListener('pointercancel', function (e) { self.cancelPointer(e); }, { signal: signal });
     window.addEventListener('keydown', function (e) { self.onKeyDown(e); }, { signal: signal });
@@ -816,6 +824,96 @@
     return null;
   };
 
+  Editor.prototype.pinStub = function (anchor, distance) {
+    if (!anchor || anchor.kind !== 'pin') return null;
+    const comp = this.scene.components.find((c) => c.id === anchor.comp);
+    if (!comp) return null;
+    const def = E.DEFS[comp.type];
+    if (!def || !def.bounds) return null;
+    const pin = E.pinLocal(comp, anchor.pin);
+    if (!pin) return null;
+    const b = def.bounds;
+    const dl = Math.abs(pin.x - b.x), dr = Math.abs(b.x + b.w - pin.x);
+    const dt = Math.abs(pin.y - b.y), db = Math.abs(b.y + b.h - pin.y);
+    const min = Math.min(dl, dr, dt, db);
+    let dx = 0, dy = 0;
+    if (min === dl) dx = -distance;
+    else if (min === dr) dx = distance;
+    else if (min === dt) dy = -distance;
+    else dy = distance;
+    return { x: comp.x + pin.x + dx, y: comp.y + pin.y + dy };
+  };
+
+  Editor.prototype.segmentClear = function (a, b, rects) {
+    if (!rects || !rects.length) return true;
+    const steps = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 4));
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const x = a.x + (b.x - a.x) * t;
+      const y = a.y + (b.y - a.y) * t;
+      for (const r of rects) {
+        if (x > r.x + 1 && x < r.x + r.w - 1 && y > r.y + 1 && y < r.y + r.h - 1) return false;
+      }
+    }
+    return true;
+  };
+
+  Editor.prototype.routeAround = function (a, b, rects) {
+    if (!rects || !rects.length) return null;
+    if (this.segmentClear(a, b, rects)) return null;
+    const nodes = [{ x: a.x, y: a.y }, { x: b.x, y: b.y }];
+    rects.forEach((r) => {
+      nodes.push({ x: r.x, y: r.y }, { x: r.x + r.w, y: r.y }, { x: r.x, y: r.y + r.h }, { x: r.x + r.w, y: r.y + r.h });
+    });
+    const n = nodes.length;
+    const dist = new Array(n).fill(Infinity);
+    const prev = new Array(n).fill(-1);
+    const used = new Array(n).fill(false);
+    dist[0] = 0;
+    for (let k = 0; k < n; k++) {
+      let u = -1;
+      for (let i = 0; i < n; i++) if (!used[i] && (u < 0 || dist[i] < dist[u])) u = i;
+      if (u < 0 || dist[u] === Infinity) break;
+      if (u === 1) break;
+      used[u] = true;
+      for (let v = 0; v < n; v++) {
+        if (v === u || used[v]) continue;
+        if (!this.segmentClear(nodes[u], nodes[v], rects)) continue;
+        const w = dist[u] + Math.hypot(nodes[v].x - nodes[u].x, nodes[v].y - nodes[u].y);
+        if (w < dist[v]) { dist[v] = w; prev[v] = u; }
+      }
+    }
+    if (dist[1] === Infinity) return null;
+    const route = [];
+    for (let at = 1; at >= 0; at = prev[at]) {
+      if (at < 0) return null;
+      route.unshift(nodes[at]);
+      if (at === 0) break;
+    }
+    return route;
+  };
+
+  Editor.prototype.routeBody = function (points, radius) {
+    const r = radius || 9;
+    let d = '';
+    for (let i = 1; i < points.length; i++) {
+      const cur = points[i];
+      const next = points[i + 1];
+      if (!next) { d += ' L' + cur.x.toFixed(2) + ' ' + cur.y.toFixed(2); break; }
+      const prev = points[i - 1];
+      const l1 = Math.hypot(cur.x - prev.x, cur.y - prev.y);
+      const l2 = Math.hypot(next.x - cur.x, next.y - cur.y);
+      const rr = Math.min(r, l1 / 2, l2 / 2);
+      if (rr < 1.5) { d += ' L' + cur.x.toFixed(2) + ' ' + cur.y.toFixed(2); continue; }
+      const bx = cur.x + (prev.x - cur.x) / l1 * rr;
+      const by = cur.y + (prev.y - cur.y) / l1 * rr;
+      const ax = cur.x + (next.x - cur.x) / l2 * rr;
+      const ay = cur.y + (next.y - cur.y) / l2 * rr;
+      d += ' L' + bx.toFixed(2) + ' ' + by.toFixed(2) + ' Q' + cur.x.toFixed(2) + ' ' + cur.y.toFixed(2) + ' ' + ax.toFixed(2) + ' ' + ay.toFixed(2);
+    }
+    return d;
+  };
+
   Editor.prototype.wirePath = function (a, b, seed) {
     const dx = b.x - a.x, dy = b.y - a.y;
     const dist = Math.hypot(dx, dy);
@@ -889,11 +987,41 @@
         '<path class="wire-halo" d="' + d + '"/>' +
         '<path class="wire ' + role + ' ' + state + sel + '" d="' + d + '"/>' +
         '<path class="wire-hit" d="' + d + '" data-wire="' + esc(w.id) + '"/>' +
-        '<circle class="wire-cap ' + role + '" cx="' + a.x.toFixed(2) + '" cy="' + a.y.toFixed(2) + '" r="2.2"/>' +
-        '<circle class="wire-cap ' + role + '" cx="' + b.x.toFixed(2) + '" cy="' + b.y.toFixed(2) + '" r="2.2"/>' +
         '</g>';
     });
     this.$layerWires.innerHTML = html;
+    this.renderWireFocus();
+  };
+
+  Editor.prototype.renderWireFocus = function () {
+    if (!this.$layerWireFocus) return;
+    const selectedId = this.selection && this.selection.kind === 'wire' ? this.selection.id : null;
+    const focusId = this.hoverWireId || selectedId;
+    let html = '';
+    (this.scene.wires || []).forEach((w) => {
+      const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
+      if (!a || !b) return;
+      const role = this.wireColorClass(w);
+      html += '<circle class="wire-cap-focus ' + role + '" cx="' + a.x.toFixed(2) + '" cy="' + a.y.toFixed(2) + '" r="3"/>';
+      html += '<circle class="wire-cap-focus ' + role + '" cx="' + b.x.toFixed(2) + '" cy="' + b.y.toFixed(2) + '" r="3"/>';
+    });
+    if (focusId) {
+      const w = this.scene.wires.find((x) => x.id === focusId);
+      if (w) {
+        const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
+        if (a && b) {
+          const index = this.scene.wires.indexOf(w);
+          const d = this.wirePath(a, b, this.wireRouteSeed(w) + index);
+          const role = this.wireColorClass(w);
+          const state = role ? '' : this.wireSimClass(w);
+          html += '<g class="wire-group wire-focus-group">' +
+            '<path class="wire-halo focus" d="' + d + '"/>' +
+            '<path class="wire-focus ' + role + ' ' + state + '" d="' + d + '"/>' +
+            '</g>';
+        }
+      }
+    }
+    this.$layerWireFocus.innerHTML = html;
   };
 
   Editor.prototype.renderDraft = function () {
@@ -1441,8 +1569,8 @@
       if (this.pending) {
         this.cursor = this.clientToWorld(e.clientX, e.clientY);
         this.renderDraft();
-        this.highlightTarget(e);
       }
+      this.highlightTarget(e);
       return;
     }
     const d = this.drag;
@@ -1533,6 +1661,11 @@
     if (hole) hole.classList.add('hot');
     const wire = el.closest('.wire-hit');
     if (this.$layerWires) {
+      const id = wire ? wire.getAttribute('data-wire') : null;
+      if (id !== this.hoverWireId) {
+        this.hoverWireId = id;
+        this.renderWireFocus();
+      }
       this.$layerWires.classList.toggle('hover-focus', !!wire);
       if (wire) wire.closest('.wire-group').classList.add('hovered');
     }

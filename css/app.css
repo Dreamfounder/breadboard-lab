@@ -574,6 +574,16 @@
 #layer-wires.hover-focus .wire-group:not(.hovered) .wire { opacity: .13; }
 #layer-wires.hover-focus .wire-group:not(.hovered) .wire-halo { opacity: 0; }
 #layer-wires.hover-focus .wire-group.hovered .wire { stroke-width: 4.2; opacity: 1; }
+#layer-wire-focus { pointer-events: none; }
+.wire-cap-focus { fill: #fff; stroke: #2e9e77; stroke-width: 1.7; }
+.wire-cap-focus.power { stroke: #e05252; }
+.wire-cap-focus.ground { stroke: #3c4657; }
+.wire-focus { fill: none; stroke: #2e9e77; stroke-width: 3.4; stroke-linecap: round; filter: drop-shadow(0 1px 2px rgba(20, 40, 30, .24)); }
+.wire-focus.power { stroke: #e05252; }
+.wire-focus.ground { stroke: #3c4657; }
+.wire-focus.high { stroke: #16a34a; filter: drop-shadow(0 0 5px rgba(34, 197, 94, .5)); }
+.wire-focus.low { stroke: #8592a6; }
+.wire-halo.focus { stroke-width: 6; opacity: .72; }
 .wire-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .wire.sel { stroke: #2563eb; stroke-width: 3.2; }
 .wire.power { stroke: #e05252; }
