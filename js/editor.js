@@ -142,6 +142,11 @@
     this._mounted = true;
     this.abort = new AbortController();
     this.scene = this.loadInitialScene();
+    if (!this.labId && BBL.LABS) {
+      const level = (this.taskId && BBL.LABS.getLevel(this.taskId)) ||
+        (this.scene.template && BBL.LABS.getLevel(this.scene.template));
+      if (level) this.labId = level.id;
+    }
     this.scene._holes = E.boardHoles(this.scene.board);
     if (this.scene.code) {
       if (this.scene.code.exampleId) this.codeExampleId = this.scene.code.exampleId;

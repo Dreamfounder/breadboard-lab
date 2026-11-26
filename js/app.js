@@ -55,7 +55,7 @@
       setActiveNav(first);
       const template = params.get('template') || null;
       const task = params.get('task') || null;
-      const labId = params.get('lab') || null;
+      const labId = params.get('lab') || (task && BBL.LABS.getLevel(task) ? task : null) || (template && BBL.LABS.getLevel(template) ? template : null);
       const openCode = params.get('code') === '1';
       const mode = first === 'sandbox' ? 'sandbox' : 'editor';
       setActiveNav(labId ? 'labs' : first);
