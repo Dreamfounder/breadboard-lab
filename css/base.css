@@ -242,7 +242,7 @@ li { list-style: none; }
 .modal-head p { margin-top: 4px; color: var(--muted); font-size: 13px; }
 .modal-head .icon-btn { margin-left: auto; flex: none; }
 .modal-body { padding: 22px 24px; }
-.modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--panel-2); }
+.modal-foot { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--panel-2); }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes modal-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
 

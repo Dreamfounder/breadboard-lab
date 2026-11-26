@@ -159,6 +159,8 @@
   icon.ic74hc04 = function () { return icIcon('74HC04', 'HEX NOT'); };
   icon.ic74hc86 = function () { return icIcon('74HC86', 'QUAD XOR'); };
   icon.ic74hc02 = function () { return icIcon('74HC02', 'QUAD NOR'); };
+  icon.ic74hc20 = function () { return icIcon('74HC20', 'DUAL 4-IN NAND'); };
+  icon.ic74hc21 = function () { return icIcon('74HC21', 'DUAL 4-IN AND'); };
 
   icon['arduino-uno'] = function () {
     let headers = '';
@@ -322,12 +324,15 @@
   function slideArt(comp, pins) {
     const a = pinOf(pins, '1'), w = pinOf(pins, '2'), b = pinOf(pins, '3');
     const knobX = Number(comp.props && comp.props.position) === 0 ? -5 : 5;
+    const label = comp.props && comp.props.label ? String(comp.props.label) : '';
+    const lw = Math.max(13, label.length * 4 + 6);
     return '<path d="M' + a.x + ' ' + a.y + 'V-13 M' + w.x + ' ' + w.y + 'V-13 M' + b.x + ' ' + b.y + 'V-13" stroke="#9aa4b2" stroke-width="1.8" stroke-linecap="round"/>' +
       '<rect x="-16" y="-26" width="32" height="14" rx="2.2" fill="url(#slideBody)" stroke="#111827" stroke-width=".8"/>' +
       '<rect x="-11" y="-29" width="22" height="6" rx="1.6" fill="#374151"/>' +
       '<rect x="' + (knobX - 3.4) + '" y="-31" width="6.8" height="8" rx="1.2" fill="#e5e7eb" stroke="#9ca3af" stroke-width=".6"/>' +
       '<path d="M' + knobX + ' -29v4" stroke="#6b7280" stroke-width=".9"/>' +
       '<text x="-9" y="-14.5" text-anchor="middle" font-family="monospace" font-size="3" fill="#9ca3af">1</text><text x="0" y="-14.5" text-anchor="middle" font-family="monospace" font-size="3" fill="#9ca3af">2</text><text x="9" y="-14.5" text-anchor="middle" font-family="monospace" font-size="3" fill="#9ca3af">3</text>' +
+      (label ? '<rect x="' + (-lw / 2) + '" y="-40" width="' + lw + '" height="9" rx="2.4" fill="#101828"/><text x="0" y="-33.2" text-anchor="middle" font-family="monospace" font-size="5" font-weight="700" fill="#fff">' + esc(label) + '</text>' : '') +
       legs([a, w, b]);
   }
 
@@ -485,7 +490,7 @@
       case 'buzzer': return buzzerArt(comp, pins);
       case 'battery-9v': case 'coin-cell': case 'aa-battery': return batteryArt(comp, pins);
       case 'power-supply': return psuArt(comp, pins);
-      case 'ic74hc08': case 'ic74hc32': case 'ic74hc04': case 'ic74hc86': case 'ic74hc02': return icArt(comp, pins);
+      case 'ic74hc08': case 'ic74hc32': case 'ic74hc04': case 'ic74hc86': case 'ic74hc02': case 'ic74hc20': case 'ic74hc21': return icArt(comp, pins);
       case 'arduino-uno': case 'microbit': return boardArt(comp, pins);
       case 'dc-motor': case 'servo': case 'vibration-motor': return motorArt(comp, pins);
       default: return '<circle r="8" fill="#94a3b8"/>';

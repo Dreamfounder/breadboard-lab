@@ -55,8 +55,10 @@
       setActiveNav(first);
       const template = params.get('template') || null;
       const task = params.get('task') || null;
+      const labId = params.get('lab') || null;
       const openCode = params.get('code') === '1';
       const mode = first === 'sandbox' ? 'sandbox' : 'editor';
+      setActiveNav(labId ? 'labs' : first);
       const host = document.createElement('div');
       host.style.minHeight = '0';
       view.appendChild(host);
@@ -64,6 +66,7 @@
         mode: mode,
         template: template,
         taskId: task || template,
+        labId: labId,
         openCode: openCode
       });
       window.__bbEditor = currentEditor;
@@ -80,6 +83,21 @@
       setActiveNav('projects');
       BBL.views.projects(view);
       setTitle('项目空间');
+      window.scrollTo(0, 0);
+      return;
+    }
+
+    if (first === 'labs') {
+      setActiveNav('labs');
+      if (seg[1]) {
+        const level = BBL.LABS.getLevel(seg[1]);
+        BBL.views.labLevel(view, seg[1]);
+        const track = level ? BBL.LABS.getTrack(level.track) : null;
+        setTitle(level ? track.label + ' · Level ' + level.number + ' · ' + level.title : '未找到关卡');
+      } else {
+        BBL.views.labs(view);
+        setTitle('Lab 练习');
+      }
       window.scrollTo(0, 0);
       return;
     }

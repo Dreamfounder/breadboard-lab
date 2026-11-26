@@ -23,7 +23,7 @@
     resistor: 'r', led: 'led', button: 'btn', potentiometer: 'pot', capacitor: 'c',
     'slide-switch': 'sw', buzzer: 'bz', 'power-supply': 'psu', 'battery-9v': 'b9',
     'coin-cell': 'bt3', 'aa-battery': 'bt15', ic74hc08: 'ic', ic74hc32: 'ic', ic74hc04: 'ic',
-    ic74hc86: 'ic', ic74hc02: 'ic', 'arduino-uno': 'uno', microbit: 'mb',
+    ic74hc86: 'ic', ic74hc02: 'ic', ic74hc20: 'ic', ic74hc21: 'ic', 'arduino-uno': 'uno', microbit: 'mb',
     'dc-motor': 'm', servo: 'sv', 'vibration-motor': 'vm'
   };
 
@@ -51,7 +51,9 @@
     ic74hc32: { 1: '1A', 2: '1B', 3: '1Y', 4: '2A', 5: '2B', 6: '2Y', 7: 'GND', 8: '3Y', 9: '3A', 10: '3B', 11: '4Y', 12: '4A', 13: '4B', 14: 'VCC' },
     ic74hc86: { 1: '1A', 2: '1B', 3: '1Y', 4: '2A', 5: '2B', 6: '2Y', 7: 'GND', 8: '3Y', 9: '3A', 10: '3B', 11: '4Y', 12: '4A', 13: '4B', 14: 'VCC' },
     ic74hc04: { 1: '1A', 2: '1Y', 3: '2A', 4: '2Y', 5: '3A', 6: '3Y', 7: 'GND', 8: '4Y', 9: '4A', 10: '5Y', 11: '5A', 12: '6Y', 13: '6A', 14: 'VCC' },
-    ic74hc02: { 1: '1Y', 2: '1A', 3: '1B', 4: '2Y', 5: '2A', 6: '2B', 7: 'GND', 8: '3A', 9: '3B', 10: '3Y', 11: '4A', 12: '4B', 13: '4Y', 14: 'VCC' }
+    ic74hc02: { 1: '1Y', 2: '1A', 3: '1B', 4: '2Y', 5: '2A', 6: '2B', 7: 'GND', 8: '3A', 9: '3B', 10: '3Y', 11: '4A', 12: '4B', 13: '4Y', 14: 'VCC' },
+    ic74hc20: { 1: '1A', 2: '1B', 3: 'NC', 4: '1C', 5: '1D', 6: '1Y', 7: 'GND', 8: '2Y', 9: '2D', 10: '2C', 11: 'NC', 12: '2B', 13: '2A', 14: 'VCC' },
+    ic74hc21: { 1: '1A', 2: '1B', 3: 'NC', 4: '1C', 5: '1D', 6: '1Y', 7: 'GND', 8: '2Y', 9: '2D', 10: '2C', 11: 'NC', 12: '2B', 13: '2A', 14: 'VCC' }
   };
 
   const IC_SWITCH_LABELS = {
@@ -131,7 +133,9 @@
     this.history = [];
     this.hIndex = -1;
     this.taskId = null;
+    this.labId = this.opts.labId || null;
     this.taskDoneShown = false;
+    this._labRecorded = false;
     this._taskCollapsed = isMobile() || window.innerHeight < 980;
     this.saveTimer = null;
     this.uidSeed = 1;
@@ -1620,6 +1624,7 @@
       if (action === 'task-check') return this.toggleSimulation();
       if (action === 'task-collapse') return this.toggleTask();
       if (action === 'task-reset') return this.resetScene();
+      if (action === 'lab-guide') { if (this.labId && BBL.ui.labGuide) BBL.ui.labGuide(this.labId); return; }
     }
     if (e.target.closest('#side-scrim')) { this.closePanel(); return; }
     // card keyboard activation
@@ -2184,7 +2189,7 @@
         case 'any-high': return switchVals.some((v) => v === 0);
         case 'switch-low': return switchVals.some((v) => v === 1);
         case 'both-low': return switchVals.length >= 2 && switchVals.every((v) => v === 1);
-        case 'and-led': case 'or-led': case 'not-led': case 'nor-led': case 'sum-lit': return lit;
+        case 'and-led': case 'or-led': case 'not-led': case 'nor-led': case 'sum-lit': case 'lab-output': return lit;
         case 'carry-lit': return !!(r && r.leds.some((l) => l.compId === 'led2' && l.on && l.current > 0.0005));
         case 'arduino-part': return !!this.findArduino();
         case 'code-open': return this.codeOpen || this.codeRunning;
@@ -2220,9 +2225,10 @@
         <div class="task-steps">${steps.map((s, i) => `<div class="task-step ${s.done ? 'done' : (s === steps.find((x) => !x.done) ? 'current' : '')}"><span class="step-dot">${s.done ? svgIcon('check') : i + 1}</span><span>${esc(s.text)}</span></div>`).join('')}</div>
         ${complete ? `<div class="task-success">${svgIcon('sparkle')}<span>${esc(task.success)}</span></div>` : ''}
         <div class="task-actions">
+          ${this.labId ? `<button class="btn sm accent" data-action="lab-guide">${svgIcon('book')} 关卡教程</button>` : ''}
           ${this.taskId === 'arduino-blink'
             ? `<button class="btn sm ${this.codeOpen ? '' : 'accent'}" data-action="toggle-code">${svgIcon('code')} ${this.codeOpen ? '关闭代码' : '打开代码编辑器'}</button>`
-            : `<button class="btn sm ${complete ? '' : 'accent'}" data-action="task-check">${this.simRunning ? svgIcon('stop') + ' 暂停' : svgIcon('play') + ' 运行检查'}</button>`}
+            : `<button class="btn sm ${complete || this.labId ? '' : 'accent'}" data-action="task-check">${this.simRunning ? svgIcon('stop') + ' 暂停' : svgIcon('play') + ' 运行检查'}</button>`}
           <button class="btn sm ghost" data-action="task-reset" title="重新载入本次实验">${svgIcon('reset')} 重置</button>
         </div>
       </div>
@@ -2231,7 +2237,13 @@
       this.taskDoneShown = true;
       setTimeout(() => {
         if (!this._mounted || !this.taskState() || !this.taskState().complete) return;
-        this.toast('实验完成：' + task.success, 'success', 5200);
+        if (this.labId && BBL.LABS && !this._labRecorded) {
+          this._labRecorded = true;
+          BBL.LABS.LabProgress.complete(this.labId);
+          this.toast('关卡完成，进度已记录：' + task.success, 'success', 5600);
+        } else {
+          this.toast('实验完成：' + task.success, 'success', 5200);
+        }
         this.celebrate();
       }, 260);
     }

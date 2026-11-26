@@ -19,7 +19,9 @@
     ic74hc32: { label: '74HC32', sub: 'QUAD OR', op: 'OR', gates: [{ a: 1, b: 2, y: 3 }, { a: 4, b: 5, y: 6 }, { a: 9, b: 10, y: 8 }, { a: 12, b: 13, y: 11 }] },
     ic74hc86: { label: '74HC86', sub: 'QUAD XOR', op: 'XOR', gates: [{ a: 1, b: 2, y: 3 }, { a: 4, b: 5, y: 6 }, { a: 9, b: 10, y: 8 }, { a: 12, b: 13, y: 11 }] },
     ic74hc02: { label: '74HC02', sub: 'QUAD NOR', op: 'NOR', gates: [{ a: 2, b: 3, y: 1 }, { a: 5, b: 6, y: 4 }, { a: 8, b: 9, y: 10 }, { a: 11, b: 12, y: 13 }] },
-    ic74hc04: { label: '74HC04', sub: 'HEX NOT', op: 'NOT', gates: [{ a: 1, y: 2 }, { a: 3, y: 4 }, { a: 5, y: 6 }, { a: 9, y: 8 }, { a: 11, y: 10 }, { a: 13, y: 12 }] }
+    ic74hc04: { label: '74HC04', sub: 'HEX NOT', op: 'NOT', gates: [{ a: 1, y: 2 }, { a: 3, y: 4 }, { a: 5, y: 6 }, { a: 9, y: 8 }, { a: 11, y: 10 }, { a: 13, y: 12 }] },
+    ic74hc20: { label: '74HC20', sub: 'DUAL 4-INPUT NAND', op: 'NAND4', gates: [{ a: 1, b: 2, c: 4, d: 5, y: 6 }, { a: 13, b: 12, c: 10, d: 9, y: 8 }] },
+    ic74hc21: { label: '74HC21', sub: 'DUAL 4-INPUT AND', op: 'AND4', gates: [{ a: 1, b: 2, c: 4, d: 5, y: 6 }, { a: 13, b: 12, c: 10, d: 9, y: 8 }] }
   };
 
   function icPins() {
@@ -46,6 +48,8 @@
     ic74hc04: { name: '74HC04', pins: icPins(), props: { label: '74HC04', sub: 'HEX INVERTER' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
     ic74hc86: { name: '74HC86', pins: icPins(), props: { label: '74HC86', sub: 'QUAD 2-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
     ic74hc02: { name: '74HC02', pins: icPins(), props: { label: '74HC02', sub: 'QUAD 2-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
+    ic74hc20: { name: '74HC20', pins: icPins(), props: { label: '74HC20', sub: 'DUAL 4-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
+    ic74hc21: { name: '74HC21', pins: icPins(), props: { label: '74HC21', sub: 'DUAL 4-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
     'arduino-uno': { name: 'Arduino Uno', pins: [{ id: '5v', x: 30, y: 34 }, { id: 'gnd', x: 18, y: 34 }, { id: 'd13', x: 6, y: 34 }, { id: 'd9', x: -6, y: 34 }, { id: 'd2', x: -18, y: 34 }, { id: 'a0', x: -30, y: 34 }], props: {}, bounds: { x: -56, y: -33, w: 112, h: 71 } },
     microbit: { name: 'micro:bit', pins: [{ id: '3v', x: -12, y: 32 }, { id: 'gnd', x: 0, y: 32 }, { id: 'p0', x: 12, y: 32 }], props: {}, bounds: { x: -35, y: -31, w: 70, h: 66 } },
     'dc-motor': { name: '直流电机', pins: [{ id: '1', x: -13, y: 0 }, { id: '2', x: 13, y: 0 }], props: {}, bounds: { x: -21, y: -33, w: 42, h: 37 } },
@@ -371,6 +375,60 @@
     return gateDemo('ic74hc02', '实验七 · 或非门 NOR', 'nor-gate');
   };
 
+  function labChipDemo(type, name, template, opts) {
+    opts = opts || {};
+    const s = baseScene(name);
+    s.template = template;
+    const psu = createComponent('power-supply', 24, 480, { voltage: 5 }); psu.id = 'psu1';
+    const swA = createComponent('slide-switch', 165, 362, { position: 1, label: 'A' }); swA.id = 'swA';
+    const swB = opts.oneInput ? null : createComponent('slide-switch', 256, 388, { position: 1, label: 'B' }); if (swB) swB.id = 'swB';
+    const ic = createComponent(type, 477, 428); ic.id = 'ic1';
+    const r = createComponent('resistor', 568, 455, { resistance: 1000 }); r.id = 'r1';
+    const led = createComponent('led', 659, 442, { color: opts.ledColor || 'green' }); led.id = 'led1';
+    s.components.push(psu, swA, ic, r, led);
+    if (swB) s.components.push(swB);
+    wire(s, 'psu1', 'V+', 'swA', '1', 'red');
+    wire(s, 'swA', '3', 'psu1', 'GND', 'black');
+    if (swB) {
+      wire(s, 'psu1', 'V+', 'swB', '1', 'red');
+      wire(s, 'swB', '3', 'psu1', 'GND', 'black');
+    }
+    wire(s, 'psu1', 'V+', 'ic1', '14', 'red');
+    wire(s, 'ic1', '7', 'psu1', 'GND', 'black');
+    wire(s, 'swA', '2', 'ic1', '1', 'green');
+    if (swB) wire(s, 'swB', '2', 'ic1', '2', 'green');
+    if (opts.fourInput) {
+      // 74HC20 / 74HC21: unused C and D inputs must be tied high
+      wire(s, 'psu1', 'V+', 'ic1', '4', 'red');
+      wire(s, 'psu1', 'V+', 'ic1', '5', 'red');
+      wire(s, 'ic1', '6', 'r1', '1', 'green');
+    } else {
+      const outPin = IC_GATES[type].gates[0].y;
+      wire(s, 'ic1', String(outPin), 'r1', '1', 'green');
+    }
+    wire(s, 'r1', '2', 'led1', 'a', 'green');
+    wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
+    return s;
+  }
+
+  Templates['lab01-led'] = function () {
+    const s = baseScene('Lab 01 · 电源、面包板与 LED');
+    s.template = 'lab01-led';
+    const psu = createComponent('power-supply', 24, 480, { voltage: 5 }); psu.id = 'psu1';
+    const r = createComponent('resistor', 256, 388, { resistance: 1000 }); r.id = 'r1';
+    const led = createComponent('led', 347, 401, { color: 'red' }); led.id = 'led1';
+    s.components.push(psu, r, led);
+    wire(s, 'psu1', 'V+', 'r1', '1', 'red');
+    wire(s, 'r1', '2', 'led1', 'a', 'green');
+    wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
+    return s;
+  };
+  Templates['lab01-nand'] = function () { return labChipDemo('ic74hc20', 'Lab 01 · 74HC20 NAND', 'lab01-nand', { fourInput: true, ledColor: 'red' }); };
+  Templates['lab01-not'] = function () { return labChipDemo('ic74hc04', 'Lab 01 · 74HC04 NOT', 'lab01-not', { oneInput: true, ledColor: 'green' }); };
+  Templates['lab01-and'] = function () { return labChipDemo('ic74hc21', 'Lab 01 · 74HC21 AND', 'lab01-and', { fourInput: true, ledColor: 'green' }); };
+  Templates['lab01-xor'] = function () { return labChipDemo('ic74hc86', 'Lab 01 · 74HC86 XOR', 'lab01-xor', { ledColor: 'yellow' }); };
+  Templates['lab01-or'] = function () { return labChipDemo('ic74hc32', 'Lab 01 · 74HC32 OR', 'lab01-or', { ledColor: 'green' }); };
+
   Templates['alarm'] = function () {
     const s = baseScene('项目 · 双条件报警器');
     s.template = 'alarm';
@@ -481,6 +539,88 @@
     wire(s, 'and1', '3', 'r2', '1', 'green');
     wire(s, 'r2', '2', 'led2', 'a', 'green');
     wire(s, 'led2', 'k', 'psu1', 'GND', 'black');
+    return s;
+  };
+
+  Templates['lab02-half'] = function () {
+    const s = baseScene('Lab 02 · 半加器 Half Adder');
+    s.template = 'lab02-half';
+    const psu = createComponent('power-supply', 24, 480, { voltage: 5 }); psu.id = 'psu1';
+    const swA = createComponent('slide-switch', 165, 362, { position: 1, label: 'A' }); swA.id = 'swA';
+    const swB = createComponent('slide-switch', 256, 401, { position: 1, label: 'B' }); swB.id = 'swB';
+    const xor = createComponent('ic74hc86', 420, 428); xor.id = 'xor1';
+    const and = createComponent('ic74hc08', 740, 428); and.id = 'and1';
+    const r1 = createComponent('resistor', 500, 468, { resistance: 1000 }); r1.id = 'r1';
+    const led1 = createComponent('led', 545, 481, { color: 'green' }); led1.id = 'led1';
+    const r2 = createComponent('resistor', 820, 468, { resistance: 1000 }); r2.id = 'r2';
+    const led2 = createComponent('led', 870, 481, { color: 'yellow' }); led2.id = 'led2';
+    s.components.push(psu, swA, swB, xor, and, r1, led1, r2, led2);
+    wire(s, 'psu1', 'V+', 'swA', '1', 'red');
+    wire(s, 'psu1', 'V+', 'swB', '1', 'red');
+    wire(s, 'swA', '3', 'psu1', 'GND', 'black');
+    wire(s, 'swB', '3', 'psu1', 'GND', 'black');
+    ['xor1', 'and1'].forEach(function (id) {
+      wire(s, 'psu1', 'V+', id, '14', 'red');
+      wire(s, id, '7', 'psu1', 'GND', 'black');
+    });
+    wire(s, 'swA', '2', 'xor1', '1', 'green');
+    wire(s, 'swB', '2', 'xor1', '2', 'green');
+    wire(s, 'swA', '2', 'and1', '1', 'green');
+    wire(s, 'swB', '2', 'and1', '2', 'green');
+    wire(s, 'xor1', '3', 'r1', '1', 'green');
+    wire(s, 'r1', '2', 'led1', 'a', 'green');
+    wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
+    wire(s, 'and1', '3', 'r2', '1', 'green');
+    wire(s, 'r2', '2', 'led2', 'a', 'green');
+    wire(s, 'led2', 'k', 'psu1', 'GND', 'black');
+    return s;
+  };
+
+  Templates['lab02-full'] = function () {
+    const s = baseScene('Lab 02 · 全加器 Full Adder');
+    s.template = 'lab02-full';
+    const psu = createComponent('power-supply', 24, 480, { voltage: 5 }); psu.id = 'psu1';
+    // three packages: 74HC86 has two XOR gates, 74HC08 has two AND gates, 74HC32 has the final OR
+    const xor = createComponent('ic74hc86', 300, 428); xor.id = 'xor1';
+    const and = createComponent('ic74hc08', 520, 428); and.id = 'and1';
+    const or = createComponent('ic74hc32', 740, 428); or.id = 'or1';
+    const swA = createComponent('slide-switch', 120, 120, { position: 1, label: 'A' }); swA.id = 'swA';
+    const swB = createComponent('slide-switch', 240, 120, { position: 1, label: 'B' }); swB.id = 'swB';
+    const swC = createComponent('slide-switch', 360, 120, { position: 1, label: 'Cin' }); swC.id = 'swCin';
+    const rSum = createComponent('resistor', 480, 180, { resistance: 1000 }); rSum.id = 'rSum';
+    const ledSum = createComponent('led', 570, 167, { color: 'green' }); ledSum.id = 'ledSum';
+    const rCout = createComponent('resistor', 480, 260, { resistance: 1000 }); rCout.id = 'rCout';
+    const ledCout = createComponent('led', 570, 247, { color: 'yellow' }); ledCout.id = 'ledCout';
+    s.components.push(psu, xor, and, or, swA, swB, swC, rSum, ledSum, rCout, ledCout);
+    // input switches
+    ['swA', 'swB', 'swCin'].forEach(function (id) {
+      wire(s, 'psu1', 'V+', id, '1', 'red');
+      wire(s, id, '3', 'psu1', 'GND', 'black');
+    });
+    // power three IC packages
+    ['xor1', 'and1', 'or1'].forEach(function (id) {
+      wire(s, 'psu1', 'V+', id, '14', 'red');
+      wire(s, id, '7', 'psu1', 'GND', 'black');
+    });
+    // first half adder: S1 = A xor B, C1 = A and B
+    wire(s, 'swA', '2', 'xor1', '1', 'green');
+    wire(s, 'swB', '2', 'xor1', '2', 'green');
+    wire(s, 'swA', '2', 'and1', '1', 'green');
+    wire(s, 'swB', '2', 'and1', '2', 'green');
+    // second half adder: Sum = S1 xor Cin, C2 = S1 and Cin
+    wire(s, 'xor1', '3', 'xor1', '4', 'green');
+    wire(s, 'xor1', '3', 'and1', '4', 'green');
+    wire(s, 'swCin', '2', 'xor1', '5', 'green');
+    wire(s, 'swCin', '2', 'and1', '5', 'green');
+    // outputs
+    wire(s, 'xor1', '6', 'rSum', '1', 'green');
+    wire(s, 'rSum', '2', 'ledSum', 'a', 'green');
+    wire(s, 'ledSum', 'k', 'psu1', 'GND', 'black');
+    wire(s, 'and1', '3', 'or1', '1', 'green');
+    wire(s, 'and1', '6', 'or1', '2', 'green');
+    wire(s, 'or1', '3', 'rCout', '1', 'green');
+    wire(s, 'rCout', '2', 'ledCout', 'a', 'green');
+    wire(s, 'ledCout', 'k', 'psu1', 'GND', 'black');
     return s;
   };
 
@@ -852,7 +992,7 @@
       leds.forEach(function (l) {
         const vd = volts[l.a] - volts[l.k];
         l.voltage = vd;
-        const should = l.on ? vd > l.vf - 0.1 : vd > l.vf + 0.05;
+        const should = l.on ? vd > l.vf - 0.02 : vd > l.vf + 0.05;
         if (should !== l.on) { l.on = should; changed = true; }
       });
       // ICs
@@ -871,8 +1011,12 @@
         ic.gates.forEach(function (g) {
           const va = volts[pn[g.a]];
           const vb = g.b != null ? volts[pn[g.b]] : null;
+          const vc = g.c != null ? volts[pn[g.c]] : null;
+          const vd = g.d != null ? volts[pn[g.d]] : null;
           const a = va > highLevel ? 1 : 0;
           const b = g.b != null ? (vb > highLevel ? 1 : 0) : 1;
+          const c = g.c != null ? (vc > highLevel ? 1 : 0) : 1;
+          const d = g.d != null ? (vd > highLevel ? 1 : 0) : 1;
           let out;
           switch (ic.info.op) {
             case 'AND': out = a & b; break;
@@ -880,6 +1024,8 @@
             case 'XOR': out = a ^ b; break;
             case 'NOR': out = (a | b) ? 0 : 1; break;
             case 'NOT': out = a ? 0 : 1; break;
+            case 'AND4': out = (a & b & c & d) ? 1 : 0; break;
+            case 'NAND4': out = (a & b & c & d) ? 0 : 1; break;
             default: out = 0;
           }
           const active = powered;
@@ -980,7 +1126,7 @@
     ics.forEach(function (ic) {
       const pn = ic.pn;
       const cr = componentResult[ic.comp.id];
-      cr.gates = ic.gates.map(function (g) { return { a: g.a, b: g.b, y: g.y, out: g.out, active: g.active }; });
+      cr.gates = ic.gates.map(function (g) { return { a: g.a, b: g.b, c: g.c, d: g.d, y: g.y, out: g.out, active: g.active }; });
       cr.powered = ic.powered;
       cr.vcc = ic.vcc; cr.gnd = ic.gnd;
       if (!ic.powered && ic.hasWire) {
@@ -989,7 +1135,12 @@
       if (ic.powered) {
         let floating = 0;
         ic.gates.forEach(function (g) {
-          [g.a, g.b].forEach(function (pinId) {
+          // Only audit gates whose output is actually used. Unused gates in a
+          // multi-gate package may be left unconnected in this teaching model.
+          const outNet = nets[pn[g.y]];
+          const outUsed = outNet && (outNet.pins.length > 1 || bind[ic.comp.id][g.y]);
+          if (!outUsed) return;
+          [g.a, g.b, g.c, g.d].forEach(function (pinId) {
             if (pinId == null) return;
             const n = pn[pinId];
             const net = nets[n];
@@ -1188,6 +1339,94 @@
         { key: 'code-running', text: '运行示例代码，观察 LED 与串口' }
       ],
       success: '代码运行了！试着切换到「旋钮调光」，并打开串口监视器。'
+    },
+    'lab01-led': {
+      kicker: 'Lab 01 · 关卡 01',
+      title: '电源、面包板与 LED',
+      summary: '完成 5V → 1kΩ → LED → GND，并理解 Vcc、GND 和 LED 极性。',
+      steps: [
+        { key: 'parts', text: '找到 5V 电源、1kΩ 电阻和 LED' },
+        { key: 'wired', text: '让电流从 V+ 经过电阻和 LED 回到 GND' },
+        { key: 'led', text: '运行仿真，让 LED 安全点亮' }
+      ],
+      success: 'LED 亮了！1kΩ 把电流限制在约 3 mA，这就是 Lab 01 的第一步。'
+    },
+    'lab01-nand': {
+      kicker: 'Lab 01 · 关卡 02',
+      title: '74HC20 · NAND',
+      summary: '4 输入 NAND 当作 2 输入使用：C、D 接高，验证 A/B 真值表。',
+      steps: [
+        { key: 'gate-power', text: '给 74HC20 接好 14 脚 VCC 与 7 脚 GND' },
+        { key: 'wired', text: 'A/B 接开关，C/D 接 VCC，输出经 1kΩ 接 LED' },
+        { key: 'lab-output', text: '运行仿真，按真值表切换 A/B 并观察输出' }
+      ],
+      success: '只有 A=1、B=1 时输出才为 0；这就是 NAND。记得 C/D 必须接高。'
+    },
+    'lab01-not': {
+      kicker: 'Lab 01 · 关卡 03',
+      title: '74HC04 · NOT',
+      summary: '输入低电平时 LED 亮，输入高电平时 LED 灭。',
+      steps: [
+        { key: 'gate-power', text: '给 74HC04 接好 14 脚 VCC 与 7 脚 GND' },
+        { key: 'wired', text: '开关接 1A，1Y 经 1kΩ 接 LED' },
+        { key: 'lab-output', text: '运行仿真，比较输入 0 与 1 时的输出' }
+      ],
+      success: '输入 0，输出 1；输入 1，输出 0。NOT 门完成了反相。'
+    },
+    'lab01-and': {
+      kicker: 'Lab 01 · 关卡 04',
+      title: '74HC21 · AND',
+      summary: '4 输入 AND 的 C/D 接高，A/B 同时为 1 时输出才为 1。',
+      steps: [
+        { key: 'gate-power', text: '给 74HC21 接好 14 脚 VCC 与 7 脚 GND' },
+        { key: 'wired', text: 'A/B 接开关，C/D 接 VCC，输出经 1kΩ 接 LED' },
+        { key: 'lab-output', text: '运行仿真，验证只有 11 时 LED 亮' }
+      ],
+      success: '1 · 1 = 1。C/D 接高保证了 4 输入 AND 只受 A/B 控制。'
+    },
+    'lab01-xor': {
+      kicker: 'Lab 01 · 关卡 05',
+      title: '74HC86 · XOR',
+      summary: '两个输入不同时输出 1，相同时输出 0。',
+      steps: [
+        { key: 'gate-power', text: '给 74HC86 接好 14 脚 VCC 与 7 脚 GND' },
+        { key: 'wired', text: 'A/B 接开关，1Y 经 1kΩ 接 LED' },
+        { key: 'lab-output', text: '运行仿真，验证 01 和 10 时 LED 亮' }
+      ],
+      success: '不同为 1，相同为 0。XOR 是半加器求和的核心。'
+    },
+    'lab01-or': {
+      kicker: 'Lab 01 · 关卡 06',
+      title: '74HC32 · OR',
+      summary: '只要有一个输入为 1，输出就为 1。',
+      steps: [
+        { key: 'gate-power', text: '给 74HC32 接好 14 脚 VCC 与 7 脚 GND' },
+        { key: 'wired', text: 'A/B 接开关，1Y 经 1kΩ 接 LED' },
+        { key: 'lab-output', text: '运行仿真，验证 01、10、11 时 LED 亮' }
+      ],
+      success: 'A + B = 1，只要有一个条件成立，输出就成立。'
+    },
+    'lab02-half': {
+      kicker: 'Lab 02 · 关卡 01',
+      title: '半加器 Half Adder',
+      summary: 'XOR 求和，AND 进位，验证 1 + 1 = 10。',
+      steps: [
+        { key: 'gate-power', text: '给 74HC86 与 74HC08 接好电源和地' },
+        { key: 'wired', text: 'A/B 同时接到 XOR 和 AND 的输入' },
+        { key: 'sum-lit', text: '运行仿真，验证四行半加器真值表' }
+      ],
+      success: 'Sum = A ⊕ B，Carry = A · B。你已经完成半加器。'
+    },
+    'lab02-full': {
+      kicker: 'Lab 02 · 关卡 02',
+      title: '全加器 Full Adder',
+      summary: '两个 XOR、两个 AND、一个 OR，把 A + B + Cin 变成 Sum 和 Cout。',
+      steps: [
+        { key: 'gate-power', text: '给 74HC86、74HC08、74HC32 接好电源和地' },
+        { key: 'wired', text: '按两级半加器结构连接 S1、C1、C2 与 OR' },
+        { key: 'lab-output', text: '运行仿真，验证 8 行全加器真值表' }
+      ],
+      success: '全加器完成！Sum 与 Cout 正确，你已经能级联出多位加法器。'
     }
   };
 

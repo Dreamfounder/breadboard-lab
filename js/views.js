@@ -175,7 +175,7 @@
       '<svg viewBox="0 0 40 40"><rect x="3" y="3" width="34" height="34" rx="10" fill="currentColor"/><path d="M12 15h16M12 20h16M12 25h16" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="15" r="1.7" fill="#fff"/><circle cx="24" cy="20" r="1.7" fill="#fff"/><circle cx="19" cy="25" r="1.7" fill="#fff"/></svg></span>' +
       '<div class="brand-copy"><strong>电路工坊</strong><small style="display:block">Breadboard Lab</small></div></div>' +
       '<p style="margin-left:4px">把电路，搭在浏览器里。</p>' +
-      '<div class="footer-links"><a href="#/projects">项目</a><a href="#/learn">教程</a><a href="#/parts">元件库</a><a href="#/sandbox">自由实验</a><a href="#" data-open-help>帮助</a></div>' +
+      '<div class="footer-links"><a href="#/projects">项目</a><a href="#/labs">Lab练习</a><a href="#/learn">教程</a><a href="#/parts">元件库</a><a href="#/sandbox">自由实验</a><a href="#" data-open-help>帮助</a></div>' +
       '</div></footer>';
   }
 
@@ -387,7 +387,7 @@
     const state = { cat: 'all', q: '' };
     mount.innerHTML = '<div class="page parts-page">' +
       '<section class="parts-hero"><div class="container"><div class="breadcrumb"><a href="#/learn">教程</a><span class="sep">/</span><span>元件百科</span></div>' +
-      '<h1>每一个零件的<br>标准答案。</h1><p>22 种面包板元件，从色环电阻到 74HC 逻辑芯片。每种都有标准造型、引脚说明、参数、使用方法和一个可以马上做的小实验。</p>' +
+      '<h1>每一个零件的<br>标准答案。</h1><p>' + BBL.PARTS.length + ' 种面包板元件，从色环电阻到 74HC 逻辑芯片。每种都有标准造型、引脚说明、参数、使用方法和一个可以马上做的小实验。</p>' +
       '<div class="parts-tools"><div class="parts-search">' + svgIcon('search') + '<input id="parts-q" type="search" placeholder="搜索元件、参数或关键词…" aria-label="搜索元件"></div><div class="parts-filter" id="parts-filter">' +
       BBL.CATEGORIES.map((c) => '<button class="chip ' + (c.id === 'all' ? 'active' : '') + '" data-part-cat="' + c.id + '">' + c.label + '</button>').join('') +
       '</div></div></div></section>' +
@@ -517,6 +517,125 @@
       '<div class="projects-code-banner"><div class="projects-code-icon">' + svgIcon('terminal') + '</div><div><div class="eyebrow green">CODE × CIRCUIT</div><h2>让代码真正驱动电路。</h2><p>内置 Arduino 教学子集：setup/loop、pinMode、digitalWrite、analogWrite、if/else 和串口监视器。写一行，电路立刻响应。</p></div><a class="btn accent lg" href="#/editor?template=arduino-blink&task=arduino-blink&code=1">' + svgIcon('code') + ' 打开代码实验</a></div>' +
       '</div></div>' + footerHTML();
     attachFooter(mount);
+  };
+
+  /* ------------------------------------------------------------------
+     Lab practice
+     ------------------------------------------------------------------ */
+  function labEditorHref(level) {
+    return '#/editor?template=' + encodeURIComponent(level.template) +
+      '&lab=' + encodeURIComponent(level.id) +
+      '&task=' + encodeURIComponent(level.taskId);
+  }
+
+  function labPartsHtml(level) {
+    const seen = {};
+    return '<div class="lab-part-list">' + level.parts.filter((id) => {
+      if (seen[id]) return false; seen[id] = true; return true;
+    }).map((id) => {
+      const p = BBL.partById(id);
+      if (!p) return '';
+      const count = level.parts.filter((x) => x === id).length;
+      return '<span class="lab-part">' + Art.icon(id) + '<b>' + esc(p.name) + '</b>' + (count > 1 ? '<i>×' + count + '</i>' : '') + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function labTruthHtml(truth) {
+    if (!truth) return '';
+    return '<div class="lab-table-wrap"><table class="lab-table"><thead><tr>' +
+      truth.headers.map((h) => '<th>' + esc(h) + '</th>').join('') +
+      '</tr></thead><tbody>' + truth.rows.map((row) => '<tr>' + row.map((cell, i) => '<td' + (i === row.length - 1 ? ' class="result"' : '') + '>' + esc(cell) + '</td>').join('') + '</tr>').join('') + '</tbody></table>' +
+      (truth.note ? '<p class="lab-table-note">' + esc(truth.note) + '</p>' : '') + '</div>';
+  }
+
+  function labGuideHtml(level) {
+    return '<div class="lab-guide">' +
+      '<div class="lab-guide-goal">' + svgIcon('target') + '<div><b>本关目标</b><p>' + esc(level.objective) + '</p></div></div>' +
+      '<h3 class="lab-guide-title">操作步骤</h3>' +
+      '<ol class="lab-guide-steps">' + level.steps.map((s) => '<li><div><b>' + esc(s.title) + '</b><span>' + esc(s.body) + '</span></div></li>').join('') + '</ol>' +
+      (level.truth ? '<h3 class="lab-guide-title">真值表</h3>' + labTruthHtml(level.truth) : '') +
+      '<h3 class="lab-guide-title">接线检查</h3>' +
+      '<div class="lab-guide-wiring">' + level.wiring.map((w) => '<div><span>' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span>' + esc(w.to) + '</span></div>').join('') + '</div>' +
+      '<div class="lab-guide-tip">' + svgIcon('lightbulb') + '<span><b>常见错误：</b>' + esc(level.pitfalls[0]) + '</span></div>' +
+      '</div>';
+  }
+
+  if (BBL.ui) {
+    BBL.ui.labGuide = function (levelId) {
+      const level = BBL.LABS.getLevel(levelId);
+      if (!level) return;
+      const track = BBL.LABS.getTrack(level.track);
+      BBL.ui.modal({
+        title: 'Level ' + level.number + ' · ' + level.title,
+        subtitle: track.label + ' · ' + track.title,
+        wide: true,
+        body: labGuideHtml(level),
+        footer: '<a class="btn" href="#/labs/' + level.id + '" data-close>' + svgIcon('book') + ' 完整关卡页</a><button class="btn primary" data-close>继续实验</button>'
+      });
+      document.querySelectorAll('.modal-backdrop [data-close]').forEach((b) => {
+        b.addEventListener('click', (e) => { if (b.tagName !== 'A') { e.preventDefault(); BBL.ui.closeModal(); } });
+      });
+    };
+  }
+
+  BBL.views.labs = function (mount) {
+    const total = BBL.LABS.levels.length;
+    const done = BBL.LABS.LabProgress.count();
+    mount.innerHTML = '<div class="page labs-page">' +
+      '<section class="labs-hero"><div class="container">' +
+      '<div class="labs-breadcrumb"><div class="breadcrumb"><a href="#/projects">工作台</a><span class="sep">/</span><span>Lab 练习</span></div><span class="labs-source">' + svgIcon('book') + ' WIX1003 Computer Systems & Organization</span></div>' +
+      '<div class="labs-hero-grid"><div><span class="eyebrow green">LAB PRACTICE · GUIDED MISSIONS</span><h1>把 Lab 练习<br>变成一场<span>闯关</span>。</h1><p>依据 WIX1003 的 Lab 01 与 Lab 02 制作。每一关都从原理讲起，给出接线表、真值表和检查点，再把你送进可以实时运行的面包板。</p><div class="labs-hero-stats"><div><b>' + total + '</b><span>个关卡</span></div><div><b>2</b><span>份 Lab</span></div><div><b>' + done + '</b><span>已完成</span></div></div></div>' +
+      '<div class="labs-progress-card"><div class="labs-progress-head"><span>总进度</span><b>' + done + ' / ' + total + '</b></div><div class="labs-progress"><span style="width:' + Math.round(done / total * 100) + '%"></span></div><p>完成实验台里的任务卡后自动记录。进度保存在本浏览器。</p><div class="labs-progress-marks">' + BBL.LABS.tracks.map((t) => '<span><i class="' + t.color + '"></i>' + t.label + ' ' + BBL.LABS.LabProgress.count(t.id) + '/' + BBL.LABS.LabProgress.total(t.id) + '</span>').join('') + '</div></div>' +
+      '</div></div></section>' +
+      '<div class="container labs-body"><div class="labs-tracks">' + BBL.LABS.tracks.map((track) => {
+        const levels = BBL.LABS.levelsOf(track.id);
+        const td = BBL.LABS.LabProgress.count(track.id);
+        return '<section class="lab-track ' + track.color + '"><div class="lab-track-head"><div class="lab-track-badge">' + track.label + '</div><div class="lab-track-title"><span>' + esc(track.cn) + '</span><h2>' + esc(track.title) + '</h2><p>' + esc(track.intro) + '</p></div><div class="lab-track-progress"><b>' + td + '/' + levels.length + '</b><span>已完成</span></div></div>' +
+          '<div class="lab-track-goals">' + track.goals.map((g) => '<span>' + svgIcon('check') + g + '</span>').join('') + '</div>' +
+          '<div class="lab-level-list">' + levels.map((level) => {
+            const complete = BBL.LABS.LabProgress.isComplete(level.id);
+            return '<a class="lab-level-row' + (complete ? ' complete' : '') + '" href="#/labs/' + level.id + '"><span class="lab-level-num">' + (complete ? svgIcon('check') : level.number) + '</span><div class="lab-level-main"><div><h3>' + esc(level.title) + '</h3><em>' + esc(level.en) + '</em></div><p>' + esc(level.brief) + '</p><div class="lab-level-meta"><span>' + svgIcon('clock') + level.minutes + ' 分钟</span><span>' + level.difficulty + '</span><span>' + level.parts.length + ' 个元件</span></div></div><span class="lab-level-cta">' + (complete ? '复习' : '开始') + ' ' + svgIcon('arrow-right') + '</span></a>';
+          }).join('') + '</div></section>';
+      }).join('') + '</div>' +
+      '<section class="labs-how"><div class="section-head"><div><div class="eyebrow amber">HOW IT WORKS</div><h2>每一关怎么玩</h2></div></div><div class="labs-how-grid">' +
+      '<div class="labs-how-card"><span>01</span><b>先读原理</b><p>用最短的篇幅解释芯片引脚、逻辑表达式和本关要验证的真值表。</p></div>' +
+      '<div class="labs-how-card"><span>02</span><b>照着接线</b><p>接线表列出每一根线从哪里到哪里。电路已经预置好，也可以拆开自己重连。</p></div>' +
+      '<div class="labs-how-card"><span>03</span><b>运行验证</b><p>在实验台切换输入，对照真值表观察 LED。任务卡全部打勾后，本关自动记录完成。</p></div>' +
+      '</div></section></div></div>' + footerHTML();
+    attachFooter(mount);
+  };
+
+  BBL.views.labLevel = function (mount, id) {
+    const level = BBL.LABS.getLevel(id);
+    if (!level) { BBL.views.notFound(mount); return; }
+    const track = BBL.LABS.getTrack(level.track);
+    const trackLevels = BBL.LABS.levelsOf(level.track);
+    const idx = trackLevels.findIndex((l) => l.id === level.id);
+    const prev = trackLevels[idx - 1];
+    const next = trackLevels[idx + 1];
+    const complete = BBL.LABS.LabProgress.isComplete(level.id);
+    const href = labEditorHref(level);
+    mount.innerHTML = '<div class="page lab-detail-page">' +
+      '<section class="lab-detail-hero ' + track.color + '"><div class="container">' +
+      '<div class="labs-breadcrumb"><div class="breadcrumb"><a href="#/labs">Lab 练习</a><span class="sep">/</span><a href="#/labs">' + track.label + '</a><span class="sep">/</span><span>Level ' + level.number + '</span></div>' + (complete ? '<span class="lab-complete-pill">' + svgIcon('check-circle') + ' 已完成</span>' : '') + '</div>' +
+      '<div class="lab-detail-grid"><div class="lab-detail-intro"><span class="eyebrow ' + (track.color === 'green' ? 'green' : '') + '">' + track.label + ' · LEVEL ' + level.number + '</span><h1>' + esc(level.title) + '</h1><p class="lab-en">' + esc(level.en) + '</p><p class="lab-objective">' + esc(level.objective) + '</p><div class="lab-hero-actions"><a class="btn primary lg" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><a class="btn lg" href="#/labs">' + svgIcon('grid') + ' 全部关卡</a></div><div class="lab-hero-meta"><span>' + svgIcon('clock') + level.minutes + ' 分钟</span><span>' + svgIcon('target') + level.difficulty + '</span><span>' + svgIcon('chip') + level.parts.length + ' 个元件</span></div></div>' +
+      '<div class="lab-detail-card"><div class="lab-detail-card-head"><span>本关元件</span><span class="pill">' + track.label + '</span></div>' + labPartsHtml(level) + '<div class="lab-detail-card-foot"><span>' + svgIcon('info') + ' 进入实验台后按任务卡操作</span></div></div></div>' +
+      '</div></section>' +
+      '<div class="container lab-detail-body"><div class="lab-detail-main">' +
+      '<section class="lab-section"><div class="lab-section-head"><span>01</span><h2>原理背景</h2></div><div class="lab-prose">' + level.background.map((p) => '<p>' + esc(p) + '</p>').join('') + '</div></section>' +
+      '<section class="lab-section"><div class="lab-section-head"><span>02</span><h2>操作步骤</h2></div><ol class="lab-steps">' + level.steps.map((s, i) => '<li><span class="lab-step-num">' + (i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p>' + esc(s.body) + '</p></div></li>').join('') + '</ol></section>' +
+      '<section class="lab-section"><div class="lab-section-head"><span>03</span><h2>接线表</h2></div><div class="lab-wiring-table">' + level.wiring.map((w) => '<div class="lab-wire-row"><span class="from">' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span class="to">' + esc(w.to) + '</span><em>' + esc(w.why) + '</em></div>').join('') + '</div></section>' +
+      (level.truth ? '<section class="lab-section"><div class="lab-section-head"><span>04</span><h2>' + esc(level.truth.title) + '</h2></div>' + labTruthHtml(level.truth) + '<div class="lab-table-tip">' + svgIcon('lightbulb') + ' 在实验台里逐行切换输入，把每次 LED 的亮/灭与表中输出对照。</div></section>' : '') +
+      '<section class="lab-section"><div class="lab-section-head"><span>05</span><h2>常见错误</h2></div><div class="lab-pitfalls">' + level.pitfalls.map((p) => '<div>' + svgIcon('warning') + '<span>' + esc(p) + '</span></div>').join('') + '</div></section>' +
+      '<section class="lab-section"><div class="lab-section-head"><span>06</span><h2>完成检查</h2></div><div class="lab-checks">' + level.checkpoints.map((c) => '<div>' + svgIcon('check-circle') + '<span>' + esc(c) + '</span></div>').join('') + '</div><div class="lab-submit"><b>提交建议</b><p>' + esc(level.submit) + '</p></div></section>' +
+      '<div class="lab-pager">' + (prev ? '<a href="#/labs/' + prev.id + '"><span>上一关</span><b>' + esc(prev.title) + '</b></a>' : '<span></span>') + (next ? '<a class="next" href="#/labs/' + next.id + '"><span>下一关</span><b>' + esc(next.title) + '</b></a>' : '') + '</div>' +
+      '</div>' +
+      '<aside class="lab-detail-side"><div class="lab-side-card"><div class="lab-side-label">本关任务</div><div class="lab-side-progress"><div><b>' + (complete ? '已完成' : '待完成') + '</b><span>' + track.label + ' · Level ' + level.number + '</span></div>' + (complete ? '<i class="done">' + svgIcon('check') + '</i>' : '<i>' + level.number + '</i>') + '</div><a class="btn primary block" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><p class="lab-side-note">' + svgIcon('info') + ' 完成实验台任务卡后自动记录。电路可以自由修改。</p><button class="btn ghost block" data-lab-guide="' + level.id + '">' + svgIcon('keyboard') + ' 在弹窗中查看步骤</button></div>' +
+      '<div class="lab-side-card"><div class="lab-side-label">实验材料</div>' + labPartsHtml(level) + '</div>' +
+      '<div class="lab-side-card source"><div class="lab-side-label">来源</div><p>' + esc(track.course) + '</p><b>' + esc(track.source) + '</b><span class="lab-source-note">按课程 Lab 内容改编为可交互关卡</span></div>' +
+      '</aside></div></div>' + footerHTML();
+    attachFooter(mount);
+    mount.querySelectorAll('[data-lab-guide]').forEach((b) => b.addEventListener('click', () => BBL.ui.labGuide(b.getAttribute('data-lab-guide'))));
   };
 
   /* ------------------------------------------------------------------
