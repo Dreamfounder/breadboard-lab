@@ -2172,10 +2172,89 @@
   /* ------------------------------------------------------------------
      Task panel
      ------------------------------------------------------------------ */
+  /* Functional check: run the player's actual circuit for every input
+     combination and compare the LED results with the lab truth table. */
+  Editor.prototype.verifyLabTruth = function () {
+    const id = this.labId;
+    if (!id) return { ok: false, total: 0, wrong: 0 };
+    const s = E.clone(this.scene);
+    const switches = s.components.filter((c) => c.type === 'slide-switch');
+    const ids = ['swA', 'swB', 'swCin'];
+    let ordered = ids.map((x) => switches.find((c) => c.id === x)).filter(Boolean);
+    if (ordered.length < switches.length) {
+      switches.forEach((sw) => { if (!ordered.includes(sw)) ordered.push(sw); });
+    }
+    let count = switches.length;
+    if (id === 'lab01-not') count = 1;
+    else if (id === 'lab02-full' || id === 'lab02-final') count = Math.min(3, switches.length);
+    else count = Math.min(2, switches.length);
+    if (count < 1) return { ok: false, total: 0, wrong: 0 };
+    ordered = ordered.slice(0, count);
+    const total = Math.pow(2, count);
+    const leds = s.components.filter((c) => c.type === 'led');
+    const patterns = {};
+    leds.forEach((l) => { patterns[l.id] = []; });
+    for (let i = 0; i < total; i++) {
+      ordered.forEach((sw, j) => {
+        const bit = (i >> (count - 1 - j)) & 1;
+        sw.props.position = bit ? 0 : 1;
+      });
+      const r = E.simulate(s);
+      leds.forEach((l) => {
+        const state = r.leds.find((x) => x.compId === l.id);
+        patterns[l.id].push(state && state.on ? 1 : 0);
+      });
+    }
+    const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+    const expected = {
+      'lab01-nand': { led1: [1, 1, 1, 0] },
+      'lab01-not': { led1: [1, 0] },
+      'lab01-and': { led1: [0, 0, 0, 1] },
+      'lab01-xor': { led1: [0, 1, 1, 0] },
+      'lab01-or': { led1: [0, 1, 1, 1] },
+      'lab02-half': { led1: [0, 1, 1, 0], led2: [0, 0, 0, 1] },
+      'lab02-full': { ledSum: [0, 1, 1, 0, 1, 0, 0, 1], ledCout: [0, 0, 0, 1, 0, 1, 1, 1] }
+    };
+    if (expected[id]) {
+      let wrong = 0;
+      Object.keys(expected[id]).forEach((ledId) => {
+        if (!patterns[ledId] || !same(patterns[ledId], expected[id][ledId])) wrong++;
+      });
+      return { ok: wrong === 0, total: total, wrong: wrong };
+    }
+    if (id === 'lab01-final') {
+      const notA = [1, 1, 0, 0];
+      const notB = [1, 0, 1, 0];
+      const wanted = [[1, 1, 1, 0], notA, [0, 0, 0, 1], [0, 1, 1, 0], [0, 1, 1, 1]];
+      const available = Object.values(patterns).map((p) => p.join(''));
+      let found = 0;
+      wanted.forEach((p) => {
+        const target = p === notA ? [notA, notB].map((x) => x.join('')) : [p.join('')];
+        const at = available.findIndex((x) => target.includes(x));
+        if (at >= 0) { available.splice(at, 1); found++; }
+      });
+      const wrong = wanted.length - found;
+      return { ok: wrong === 0, total: 5, wrong: wrong };
+    }
+    if (id === 'lab02-final') {
+      const sum = [0, 1, 1, 0, 1, 0, 0, 1];
+      const cout = [0, 0, 0, 1, 0, 1, 1, 1];
+      const wantPairs = sum.map((v, i) => v + '' + cout[i]).sort().join(',');
+      const keys = Object.keys(patterns);
+      for (let a = 0; a < keys.length; a++) {
+        for (let b = a + 1; b < keys.length; b++) {
+          const pairs = patterns[keys[a]].map((v, i) => v + '' + patterns[keys[b]][i]).sort().join(',');
+          if (pairs === wantPairs) return { ok: true, total: 8, wrong: 0 };
+        }
+      }
+      return { ok: false, total: 8, wrong: 8 };
+    }
+    return { ok: false, total: total, wrong: total };
+  };
+
   Editor.prototype.taskState = function () {
     const task = E.TASKS[this.taskId];
-    if (!task) return null;
-    const s = this.scene;
+    if (!task) return null;    const s = this.scene;
     const r = this.simRunning ? this.simResult : null;
     const comps = s.components;
     const has = (type) => comps.some((c) => c.type === type);
@@ -2236,6 +2315,11 @@
               return info && info.gates.some((g) => conn(ic.id, String(g.y)));
             });
           case 'lab-run': return !!(this.simRunning && lit);
+          case 'lab-correct': {
+            const check = this.verifyLabTruth();
+            this.labCheck = check;
+            return !!(this.simRunning && check.ok);
+          }
           case 'gate-power': return ics.length ? (r ? ics.every((c) => r.components[c.id] && r.components[c.id].powered) : icPoweredWired()) : false;
         case 'both-high': return switchVals.length >= 2 && switchVals.every((v) => v === 0);
         case 'any-high': return switchVals.some((v) => v === 0);
@@ -2252,7 +2336,7 @@
         default: return false;
       }
     };
-    const steps = task.steps.map((st) => ({ text: st.text, done: done(st.key) }));
+    const steps = task.steps.map((st) => ({ key: st.key, text: st.text, done: done(st.key) }));
     const complete = steps.length > 0 && steps.every((x) => x.done);
     return { task: task, steps: steps, complete: complete };
   };
@@ -2265,6 +2349,8 @@
     const doneCount = steps.filter((s) => s.done).length;
     const pct = Math.round((doneCount / steps.length) * 100);
     const collapsed = this._taskCollapsed;
+    const checkStep = steps.find((s) => s.key === 'lab-correct');
+    const showCheckWarning = !!(this.labId && this.simRunning && checkStep && !checkStep.done);
     const currentLevel = this.labId && BBL.LABS ? BBL.LABS.getLevel(this.labId) : null;
     const next = this.labId && BBL.LABS ? BBL.LABS.nextLevel(this.labId) : null;
     const nextTrack = next && BBL.LABS ? BBL.LABS.getTrack(next.track) : null;
@@ -2287,6 +2373,7 @@
         <div class="task-progress-row"><span>实验进度</span><b>${doneCount} / ${steps.length}</b></div>
         <div class="task-progress"><span style="width:${pct}%"></span></div>
         <div class="task-steps">${steps.map((s, i) => `<div class="task-step ${s.done ? 'done' : (s === steps.find((x) => !x.done) ? 'current' : '')}"><span class="step-dot">${s.done ? svgIcon('check') : i + 1}</span><span>${esc(s.text)}</span></div>`).join('')}</div>
+        ${showCheckWarning ? `<div class="task-check-warning">${svgIcon('warning')}<span><b>灯亮不等于接对。</b> 系统把每种输入组合都跑了一遍，输出还没全部对上。回头检查电源、输入和输出接线。</span></div>` : ''}
         ${complete ? `<div class="task-success">${svgIcon('sparkle')}<span>${esc(task.success)}</span></div>` : ''}
         ${complete && this.labId ? `<div class="task-complete-bar"><span>${svgIcon('check-circle')} 已完成 · 进度已保存</span><a class="btn sm primary" href="${nextHref}">${nextLabel} ${svgIcon('arrow-right')}</a></div>` : ''}
         <div class="task-actions">

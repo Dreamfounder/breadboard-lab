@@ -895,7 +895,7 @@
       if (!info) return;
       const pn = pinNet[comp.id];
       const gateStates = info.gates.map(function (g) {
-        return { a: g.a, b: g.b, y: g.y, out: false, powered: false, desired: 0, active: false };
+        return { a: g.a, b: g.b, c: g.c, d: g.d, y: g.y, out: false, powered: false, desired: 0, active: false };
       });
       const hasWire = (scene.wires || []).some(function (w) {
         return (w.a.kind === 'pin' && w.a.comp === comp.id) || (w.b.kind === 'pin' && w.b.comp === comp.id);
@@ -1372,7 +1372,7 @@
         { key: 'lab-power', text: '把 74HC20 的第 14 脚接 V+、第 7 脚接 GND' },
         { key: 'lab-inputs', text: '把 A/B 开关接到输入脚；C/D 该接什么？先想清楚再接' },
         { key: 'lab-output', text: '把输出脚经 1kΩ 接 LED，LED 阴极回 GND' },
-        { key: 'lab-run', text: '运行仿真，切换 A/B，自己观察并记录输出' }
+        { key: 'lab-correct', text: '运行仿真，切换 A/B，自己观察并记录输出' }
       ],
       success: '电路开始响应了。回到关卡页，把真值表自己填完，再用“检查我的真值表”验证。'
     },
@@ -1384,7 +1384,7 @@
         { key: 'lab-power', text: '把 74HC04 的第 14 脚接 V+、第 7 脚接 GND' },
         { key: 'lab-inputs', text: '把开关公共端接到 1A 输入' },
         { key: 'lab-output', text: '把 1Y 输出经 1kΩ 接 LED，LED 阴极回 GND' },
-        { key: 'lab-run', text: '运行仿真，切换输入，自己观察输出' }
+        { key: 'lab-correct', text: '运行仿真，切换输入，自己观察输出' }
       ],
       success: '输入改变时输出也跟着变。回到关卡页，自己写出两行真值表并检查。'
     },
@@ -1396,7 +1396,7 @@
         { key: 'lab-power', text: '把 74HC21 的第 14 脚接 V+、第 7 脚接 GND' },
         { key: 'lab-inputs', text: 'A/B 接开关；未使用的 C/D 应该接高还是接低？' },
         { key: 'lab-output', text: '把输出脚经 1kΩ 接 LED，LED 阴极回 GND' },
-        { key: 'lab-run', text: '运行仿真，切换 A/B，记录输出' }
+        { key: 'lab-correct', text: '运行仿真，切换 A/B，记录输出' }
       ],
       success: '接线完成，AND 已经开始响应。回到关卡页，自己补完真值表。'
     },
@@ -1408,7 +1408,7 @@
         { key: 'lab-power', text: '把 74HC86 的第 14 脚接 V+、第 7 脚接 GND' },
         { key: 'lab-inputs', text: '把 A/B 开关接到 XOR 的第 1、2 脚' },
         { key: 'lab-output', text: '把第 3 脚输出经 1kΩ 接 LED' },
-        { key: 'lab-run', text: '运行仿真，试完四种输入组合' }
+        { key: 'lab-correct', text: '运行仿真，试完四种输入组合' }
       ],
       success: 'XOR 已经有反应了。回到关卡页，凭自己的观察填写真值表。'
     },
@@ -1420,7 +1420,7 @@
         { key: 'lab-power', text: '把 74HC32 的第 14 脚接 V+、第 7 脚接 GND' },
         { key: 'lab-inputs', text: '把 A/B 开关接到第 1、2 脚' },
         { key: 'lab-output', text: '把第 3 脚输出经 1kΩ 接 LED' },
-        { key: 'lab-run', text: '运行仿真，试完四种输入组合' }
+        { key: 'lab-correct', text: '运行仿真，试完四种输入组合' }
       ],
       success: 'Lab 01 的五个门都做完了。回到关卡页，自己把五张表整理进报告。'
     },
@@ -1432,7 +1432,7 @@
         { key: 'lab-power', text: '给 74HC86 和 74HC08 接好 V+ 与 GND' },
         { key: 'lab-inputs', text: '把 A/B 同时接到两个门的输入' },
         { key: 'lab-output', text: '两个输出分别经 1kΩ 接 LED' },
-        { key: 'lab-run', text: '运行仿真，试完四组输入，再记录 Sum/Carry' }
+        { key: 'lab-correct', text: '运行仿真，试完四组输入，再记录 Sum/Carry' }
       ],
       success: '半加器已经能响应输入。回到关卡页，自己把 Sum 和 Carry 填完并检查。'
     },
@@ -1444,7 +1444,7 @@
         { key: 'lab-power', text: '给 74HC86、74HC08、74HC32 都接好 V+ 与 GND' },
         { key: 'lab-inputs', text: '先搭第一级 A⊕B、A·B，再把 S1 和 Cin 接入第二级' },
         { key: 'lab-output', text: 'Sum 与 Cout 分别经 1kΩ 接 LED；检查两个进位是否经 OR 合并' },
-        { key: 'lab-run', text: '运行仿真，自己验证八组输入并填写真值表' }
+        { key: 'lab-correct', text: '运行仿真，自己验证八组输入并填写真值表' }
       ],
       success: '全加器接通了。回到关卡页，把八行真值表自己填完，用检查功能确认。'
     },
@@ -1457,7 +1457,7 @@
         { key: 'lab-power', text: '给五片芯片都接好电源，逐片检查是否真的通电' },
         { key: 'lab-inputs', text: '接好共享输入；74HC20/21 的 C/D 该接什么？自己判断' },
         { key: 'lab-output', text: '每片输出都经 1kΩ 接 LED，并让 LED 阴极回到 GND' },
-        { key: 'lab-run', text: '运行仿真，逐片验证并填完五张真值表' }
+        { key: 'lab-correct', text: '运行仿真，逐片验证并填完五张真值表' }
       ],
       success: '五门验证台完成。你已经从空画布独立搭出了 Lab 01 的完整结果。'
     },
@@ -1470,7 +1470,7 @@
         { key: 'lab-power', text: '给三片芯片都接好电源，并检查每一片都真正通电' },
         { key: 'lab-inputs', text: '自己决定两级半加器的连接：S1、C1、C2 分别应该去哪里？' },
         { key: 'lab-output', text: '把 Sum 和 Cout 分别接到电阻与 LED，并检查进位是否经过 OR' },
-        { key: 'lab-run', text: '运行仿真，自己验证八组输入并填完真值表' }
+        { key: 'lab-correct', text: '运行仿真，自己验证八组输入并填完真值表' }
       ],
       success: '终验完成。空画布上的全加器已经能工作，这就是 Lab 02 的最终交付电路。'
     }

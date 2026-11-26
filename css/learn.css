@@ -596,6 +596,9 @@ table.truth td.out { background: #f3fbf7; color: var(--accent-deep); font-weight
 .part-plain-box { margin-top: 12px; padding: 12px 14px; border-radius: 9px; background: #f2f8ff; border: 1px solid #dce9fb; }
 .part-plain-box b { display: block; font-size: 9px; color: var(--brand); letter-spacing: .08em; text-transform: uppercase; }
 .part-plain-box p { margin-top: 4px; font-size: 12.5px; line-height: 1.8; color: var(--ink-2); }
+.part-why { margin-top: 9px; padding: 10px 12px; border-radius: 8px; background: #f7fbf8; border: 1px solid #e0f1e7; }
+.part-why b { display: block; font-size: 9px; color: var(--accent-deep); letter-spacing: .07em; text-transform: uppercase; }
+.part-why p { margin-top: 3px; font-size: 11.5px; line-height: 1.75; color: var(--ink-2); }
 .part-tech-note { margin-top: 10px; font-size: 9px; color: var(--muted-2); line-height: 1.6; }
 .part-tech-details { margin-top: 10px; border: 1px solid #e8eef7; border-radius: 8px; background: #fbfcfe; }
 .part-tech-details summary { padding: 9px 11px; cursor: pointer; font-size: 10px; font-weight: 650; color: var(--brand); list-style: none; }
