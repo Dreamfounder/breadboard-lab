@@ -514,6 +514,11 @@
 .pin-state { width: 6px; height: 6px; border-radius: 50%; background: #cfd6e2; }
 .pin-state.high { background: #22c55e; box-shadow: 0 0 0 3px #e8f9ef; }
 .pin-state.low { background: #94a3b8; }
+.wire-endpoints { display: flex; flex-direction: column; gap: 5px; }
+.wire-endpoints > div { display: flex; align-items: flex-start; gap: 6px; padding: 6px 7px; border-radius: 6px; background: #f8fafd; border: 1px solid #eef2f8; }
+.wire-endpoints i { width: 7px; height: 7px; border-radius: 50%; flex: none; margin-top: 4px; background: #2e9e77; }
+.wire-endpoints i.end-a { background: #2563eb; }
+.wire-endpoints span { font-size: 10px; line-height: 1.5; color: var(--ink-2); }
 .inspector-actions { padding: 14px 16px 22px; display: flex; gap: 7px; }
 .inspector-actions .btn { flex: 1; }
 .inspector-actions .icon-btn { flex: none; width: 36px; height: 36px; border: 1px solid var(--line); }

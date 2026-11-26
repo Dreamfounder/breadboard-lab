@@ -314,8 +314,8 @@
                 ${svgDefs()}
                 <g id="viewport">
                   <g id="layer-board"></g>
-                  <g id="layer-wires"></g>
                   <g id="layer-comps"></g>
+                  <g id="layer-wires"></g>
                   <g id="layer-pins"></g>
                   <g id="layer-draft"></g>
                 </g>
@@ -858,6 +858,22 @@
     return '';
   };
 
+  Editor.prototype.describeAnchor = function (anchor) {
+    if (!anchor) return '未知位置';
+    if (anchor.kind === 'pin') {
+      const comp = this.scene.components.find((c) => c.id === anchor.comp);
+      if (!comp) return '引脚';
+      return partOf(comp.type).name + ' · ' + pinName(comp, anchor.pin);
+    }
+    if (anchor.kind === 'hole') {
+      const h = (this.scene._holes || []).find((x) => x.id === anchor.hole);
+      if (!h) return '面包板孔';
+      if (h.kind === 'rail') return h.rail && h.rail.indexOf('p') >= 0 ? '电源正极轨' : '电源负极轨';
+      return h.col && h.rowName ? '面包板 · 第 ' + h.col + ' 列 ' + h.rowName + ' 行' : '面包板孔';
+    }
+    return '连接点';
+  };
+
   Editor.prototype.renderWires = function () {
     let html = '';
     const selectedId = this.selection && this.selection.kind === 'wire' ? this.selection.id : null;
@@ -869,6 +885,7 @@
       const state = role ? '' : this.wireSimClass(w);
       const sel = w.id === selectedId ? ' sel' : '';
       html += '<g class="wire-group" data-wire-id="' + esc(w.id) + '">' +
+        '<title>' + esc(this.describeAnchor(w.a) + ' → ' + this.describeAnchor(w.b)) + '</title>' +
         '<path class="wire-halo" d="' + d + '"/>' +
         '<path class="wire ' + role + ' ' + state + sel + '" d="' + d + '"/>' +
         '<path class="wire-hit" d="' + d + '" data-wire="' + esc(w.id) + '"/>' +
@@ -1134,7 +1151,10 @@
           <div class="inspector-art" style="font-size:28px">${svgIcon('wire')}</div>
           <div class="inspector-title"><h3>导线</h3><p>JUMPER WIRE</p><div class="inspector-badges"><span class="pill">连接线</span></div></div>
         </div>
-        <p class="inspector-desc">把两个引脚或面包板孔连接成同一条电气网络。右键或 Delete 可删除。</p>
+        <p class="inspector-desc">把两个引脚或面包板孔连接成同一条电气网络。点击导线后，这里会显示两端接在哪里。</p>
+      </div>
+      <div class="inspector-section"><h4>${svgIcon('pin')} 连接位置</h4>
+        <div class="wire-endpoints"><div><i class="end-a"></i><span>${esc(this.describeAnchor(w.a))}</span></div><div><i class="end-b"></i><span>${esc(this.describeAnchor(w.b))}</span></div></div>
       </div>
       <div class="inspector-section"><h4>${svgIcon('layers')} 颜色</h4>
         <div class="prop-row"><span class="prop-label">导线颜色</span><div class="color-dots">${colors.map((c) => `<button class="color-dot${w.color === c[0] ? ' active' : ''}" data-action="set-wire-color" data-color="${c[0]}" title="${c[2]}" style="background:${c[1]}"></button>`).join('')}</div></div>
@@ -2316,6 +2336,7 @@
       const conn = (compId, pin) => s.wires.some((w) =>
         (w.a.kind === 'pin' && w.a.comp === compId && String(w.a.pin) === String(pin)) ||
         (w.b.kind === 'pin' && w.b.comp === compId && String(w.b.pin) === String(pin)));
+      const diag = {};
       const done = (key) => {
         switch (key) {
           case 'parts':
@@ -2346,7 +2367,11 @@
             const led = comps.find((c) => c.type === 'led');
             return !!r && !!led && conn(r.id, '1') && conn(r.id, '2') && conn(led.id, 'a') && conn(led.id, 'k');
           }
-          case 'lab-power': return ics.length > 0 && ics.every((ic) => rr.components[ic.id] && rr.components[ic.id].powered);
+          case 'lab-power': {
+            const ok = ics.length > 0 && ics.every((ic) => rr.components[ic.id] && rr.components[ic.id].powered);
+            diag.power = ok;
+            return ok;
+          }
           case 'lab-inputs': {
             const switches = comps.filter((c) => c.type === 'slide-switch');
             const src = comps.find((c) => E.SOURCE_TYPES[c.type]);
@@ -2369,19 +2394,26 @@
               if (ic.type !== 'ic74hc20' && ic.type !== 'ic74hc21') return true;
               return plusNet != null && netOf(ic.id, '4') === plusNet && netOf(ic.id, '5') === plusNet;
             });
-            return switchOk && unusedOk;
+            const ok = switchOk && unusedOk;
+            diag.inputs = ok;
+            return ok;
           }
-          case 'lab-output':
-            if (this.labId === 'lab01-nand') return outPathOk('ic1', '6', 'r1', 'led1');
-            if (this.labId === 'lab01-not') return outPathOk('ic1', '2', 'r1', 'led1');
-            if (this.labId === 'lab01-and' || this.labId === 'lab01-xor' || this.labId === 'lab01-or') return outPathOk('ic1', '3', 'r1', 'led1');
-            if (this.labId === 'lab02-half') return outPathOk('xor1', '3', 'r1', 'led1') && outPathOk('and1', '3', 'r2', 'led2');
-            if (this.labId === 'lab02-full') return outPathOk('xor1', '6', 'rSum', 'ledSum') && outPathOk('or1', '3', 'rCout', 'ledCout');
-            if (!ics.length) return false;
-            return ics.every((ic) => {
-              const info = E.IC_GATES[ic.type];
-              return info && info.gates.some((g) => conn(ic.id, String(g.y)));
-            });
+          case 'lab-output': {
+            let ok = false;
+            if (this.labId === 'lab01-nand') ok = outPathOk('ic1', '6', 'r1', 'led1');
+            else if (this.labId === 'lab01-not') ok = outPathOk('ic1', '2', 'r1', 'led1');
+            else if (this.labId === 'lab01-and' || this.labId === 'lab01-xor' || this.labId === 'lab01-or') ok = outPathOk('ic1', '3', 'r1', 'led1');
+            else if (this.labId === 'lab02-half') ok = outPathOk('xor1', '3', 'r1', 'led1') && outPathOk('and1', '3', 'r2', 'led2');
+            else if (this.labId === 'lab02-full') ok = outPathOk('xor1', '6', 'rSum', 'ledSum') && outPathOk('or1', '3', 'rCout', 'ledCout');
+            else if (ics.length) {
+              ok = ics.every((ic) => {
+                const info = E.IC_GATES[ic.type];
+                return info && info.gates.some((g) => conn(ic.id, String(g.y)));
+              });
+            }
+            diag.output = ok;
+            return ok;
+          }
           case 'lab-run': return !!(this.simRunning && lit);
           case 'lab-correct': {
             const check = this.verifyLabTruth();
@@ -2406,19 +2438,36 @@
     };
     const steps = task.steps.map((st) => ({ key: st.key, text: st.text, done: done(st.key) }));
     const complete = steps.length > 0 && steps.every((x) => x.done);
-    return { task: task, steps: steps, complete: complete };
+    return { task: task, steps: steps, complete: complete, diag: diag };
   };
 
   Editor.prototype.renderTask = function () {
     const state = this.taskState();
     if (!state || this.mode !== 'editor') { this.$taskSlot.innerHTML = ''; return; }
-    const { task, steps, complete } = state;
+    const { task, steps, complete, diag } = state;
     if (complete) this.recordLabCompletion();
     const doneCount = steps.filter((s) => s.done).length;
     const pct = Math.round((doneCount / steps.length) * 100);
     const collapsed = this._taskCollapsed;
     const checkStep = steps.find((s) => s.key === 'lab-correct');
     const showCheckWarning = !!(this.labId && this.simRunning && checkStep && !checkStep.done);
+    const issues = [];
+    if (diag && diag.parts === false) issues.push('零件还没摆齐。');
+    if (diag && diag.power === false) issues.push('芯片还没真正通电：查 14/7 脚和电源。');
+    if (diag && diag.inputs === false) issues.push('开关或 C/D 还没接到正确电平：查输入脚，C/D 要接高。');
+    if (diag && diag.output === false) issues.push('输出到灯的路径不完整：查输出脚、电阻、LED 方向和 GND。');
+    if (!issues.length) {
+      issues.push((this.labCheck && this.labCheck.hint) || '接线路径看起来通了，但输出组合还没全部对上。');
+      const pinHints = {
+        'lab01-nand': '74HC20 的 1Y 是第 6 脚，第 8 脚是另一个门的输出。',
+        'lab01-and': '74HC21 的 1Y 是第 6 脚。',
+        'lab01-not': '74HC04 的 1Y 是第 2 脚。',
+        'lab01-xor': '74HC86 的 1Y 是第 3 脚。',
+        'lab01-or': '74HC32 的 1Y 是第 3 脚。'
+      };
+      if (pinHints[this.labId]) issues.push(pinHints[this.labId]);
+    }
+    const warningText = issues.slice(0, 2).join(' ');
     const currentLevel = this.labId && BBL.LABS ? BBL.LABS.getLevel(this.labId) : null;
     const next = this.labId && BBL.LABS ? BBL.LABS.nextLevel(this.labId) : null;
     const nextTrack = next && BBL.LABS ? BBL.LABS.getTrack(next.track) : null;
@@ -2441,7 +2490,7 @@
         <div class="task-progress-row"><span>实验进度</span><b>${doneCount} / ${steps.length}</b></div>
         <div class="task-progress"><span style="width:${pct}%"></span></div>
         <div class="task-steps">${steps.map((s, i) => `<div class="task-step ${s.done ? 'done' : (s === steps.find((x) => !x.done) ? 'current' : '')}"><span class="step-dot">${s.done ? svgIcon('check') : i + 1}</span><span>${esc(s.text)}</span></div>`).join('')}</div>
-        ${showCheckWarning ? `<div class="task-check-warning">${svgIcon('warning')}<span><b>还没通过整表检查。</b> ${esc((this.labCheck && this.labCheck.hint) || '系统把每种输入组合都跑了一遍，输出还没全部对上。先检查电源、输入和输出接线。')}</span></div>` : ''}
+        ${showCheckWarning ? `<div class="task-check-warning">${svgIcon('warning')}<span><b>还没通过整表检查。</b> ${esc(warningText)}</span></div>` : ''}
         ${complete ? `<div class="task-success">${svgIcon('sparkle')}<span>${esc(task.success)}</span></div>` : ''}
         ${complete && this.labId ? `<div class="task-complete-bar"><span>${svgIcon('check-circle')} 已完成 · 进度已保存</span><a class="btn sm primary" href="${nextHref}">${nextLabel} ${svgIcon('arrow-right')}</a></div>` : ''}
         <div class="task-actions">
