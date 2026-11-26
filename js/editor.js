@@ -918,39 +918,25 @@
     return d;
   };
 
-  Editor.prototype.wirePath = function (a, b, seed, obstacles, stubA, stubB) {
-    const p0 = stubA || a;
-    const p1 = stubB || b;
-    const dx = p1.x - p0.x, dy = p1.y - p0.y;
+  Editor.prototype.wirePath = function (a, b, seed, obstacles) {
+    const dx = b.x - a.x, dy = b.y - a.y;
     const dist = Math.max(1, Math.hypot(dx, dy));
     const n = Number(seed) || 0;
     const bend = ((n % 9) - 4);
-    let high = null;
-    if (obstacles && obstacles.length && !this.segmentClear(p0, p1, obstacles)) {
+    let lift = Math.min(52, 16 + dist * 0.065) + bend * 3;
+    let cy = Math.min(a.y, b.y) - lift;
+    if (obstacles && obstacles.length && !this.segmentClear(a, b, obstacles)) {
       let top = Infinity;
-      const minX = Math.min(p0.x, p1.x) - 4, maxX = Math.max(p0.x, p1.x) + 4;
+      const minX = Math.min(a.x, b.x) - 4, maxX = Math.max(a.x, b.x) + 4;
       obstacles.forEach((o) => {
         if (o.x < maxX && o.x + o.w > minX) top = Math.min(top, o.y);
       });
-      if (top !== Infinity) high = top - 18;
+      if (top !== Infinity) cy = Math.min(cy, top - 22);
     }
-    let d = 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2);
-    if (stubA) d += ' L' + p0.x.toFixed(2) + ' ' + p0.y.toFixed(2);
-    if (high != null) {
-      const cy = high + bend * 2.5;
-      const x1 = p0.x + dx * 0.22;
-      const x2 = p1.x - dx * 0.22;
-      d += ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2);
-    } else {
-      const lift = Math.min(44, 16 + dist * 0.06) + Math.abs(bend) * 2.2;
-      const cy = Math.min(p0.y, p1.y) - lift;
-      const sway = bend * 2.2;
-      const x1 = p0.x + dx * 0.28 + sway;
-      const x2 = p1.x - dx * 0.28 + sway;
-      d += ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2);
-    }
-    if (stubB) d += ' L' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
-    return d;
+    const sway = bend * 2.2;
+    const x1 = a.x + dx * 0.24 + sway;
+    const x2 = b.x - dx * 0.24 + sway;
+    return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
   };
 
   Editor.prototype.wireRouteSeed = function (w) {
@@ -1011,9 +997,7 @@
       const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
       if (!a || !b) return;
       const blocked = obstacles.filter((o) => o.id !== w.a.comp && o.id !== w.b.comp);
-      const stubA = this.pinStub(w.a, 14);
-      const stubB = this.pinStub(w.b, 14);
-      const d = this.wirePath(a, b, this.wireRouteSeed(w) + index, blocked, stubA, stubB);
+      const d = this.wirePath(a, b, this.wireRouteSeed(w) + index, blocked);
       this._wirePathCache[w.id] = d;
       const role = this.wireColorClass(w);
       const state = role ? '' : this.wireSimClass(w);
@@ -1038,10 +1022,6 @@
       const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
       if (!a || !b) return;
       const role = this.wireColorClass(w);
-      const sa = this.pinStub(w.a, 13);
-      const sb = this.pinStub(w.b, 13);
-      if (sa) html += '<path class="wire-end-stub ' + role + '" d="M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' L' + sa.x.toFixed(2) + ' ' + sa.y.toFixed(2) + '"/>';
-      if (sb) html += '<path class="wire-end-stub ' + role + '" d="M' + b.x.toFixed(2) + ' ' + b.y.toFixed(2) + ' L' + sb.x.toFixed(2) + ' ' + sb.y.toFixed(2) + '"/>';
       html += '<circle class="wire-cap-focus ' + role + '" cx="' + a.x.toFixed(2) + '" cy="' + a.y.toFixed(2) + '" r="3"/>';
       html += '<circle class="wire-cap-focus ' + role + '" cx="' + b.x.toFixed(2) + '" cy="' + b.y.toFixed(2) + '" r="3"/>';
     });
