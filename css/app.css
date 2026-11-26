@@ -578,6 +578,9 @@
 .wire-cap-focus { fill: #fff; stroke: #2e9e77; stroke-width: 1.7; }
 .wire-cap-focus.power { stroke: #e05252; }
 .wire-cap-focus.ground { stroke: #3c4657; }
+.wire-end-stub { fill: none; stroke: #2e9e77; stroke-width: 2.6; stroke-linecap: round; }
+.wire-end-stub.power { stroke: #e05252; }
+.wire-end-stub.ground { stroke: #3c4657; }
 .wire-focus { fill: none; stroke: #2e9e77; stroke-width: 3.4; stroke-linecap: round; filter: drop-shadow(0 1px 2px rgba(20, 40, 30, .24)); }
 .wire-focus.power { stroke: #e05252; }
 .wire-focus.ground { stroke: #3c4657; }

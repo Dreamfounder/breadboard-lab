@@ -270,7 +270,6 @@
     wire(s, 'psu1', 'V+', 'r1', '1', 'red');
     wire(s, 'r1', '2', 'led1', 'a', 'green');
     wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
-    addShowcaseICs(s);
     return s;
   };
 
@@ -637,10 +636,11 @@
     return s;
   };
 
-  function getTemplate(id) {
+  function getTemplate(id, opts) {
     const fn = Templates[id] || Templates['led-basic'];
     uidCounter = 1;
     const s = fn();
+    if (TASKS[id] && !(opts && opts.keepWires)) s.wires = [];
     s._holes = boardHoles(s.board);
     return s;
   }

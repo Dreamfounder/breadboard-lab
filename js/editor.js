@@ -209,6 +209,10 @@
     }
     const saved = this.readSaved();
     if (saved) {
+      if (saved.template === 'led-basic' && (saved.components || []).some((c) => /^chip\d+$/.test(c.id))) {
+        saved.components = saved.components.filter((c) => !/^chip\d+$/.test(c.id));
+        saved.wires = [];
+      }
       this.savedOnLoad = true;
       this.taskId = saved.template && E.TASKS[saved.template] ? saved.template : null;
       return saved;
@@ -315,8 +319,8 @@
                 ${svgDefs()}
                 <g id="viewport">
                   <g id="layer-board"></g>
-                  <g id="layer-wires"></g>
                   <g id="layer-comps"></g>
+                  <g id="layer-wires"></g>
                   <g id="layer-wire-focus"></g>
                   <g id="layer-pins"></g>
                   <g id="layer-draft"></g>
@@ -710,7 +714,7 @@
       return;
     }
     this.stopSimulation();
-    this.scene = E.createScene('led-basic');
+    this.scene = E.createScene('led-basic', { keepWires: true });
     this.scene.name = this.mode === 'sandbox' ? '自由实验 · LED 示例' : '实验一 · 点亮第一颗 LED';
     this.scene.template = this.mode === 'editor' ? 'led-basic' : null;
     this.scene._holes = E.boardHoles(this.scene.board);
@@ -914,18 +918,30 @@
     return d;
   };
 
-  Editor.prototype.wirePath = function (a, b, seed) {
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const dist = Math.hypot(dx, dy);
+  Editor.prototype.wirePath = function (a, b, seed, obstacles, stubA, stubB) {
+    const p0 = stubA || a;
+    const p1 = stubB || b;
+    const route = obstacles && obstacles.length ? this.routeAround(p0, p1, obstacles) : null;
+    if (route) {
+      let d = 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2);
+      if (stubA) d += ' L' + p0.x.toFixed(2) + ' ' + p0.y.toFixed(2);
+      d += this.routeBody(route);
+      if (stubB) d += ' L' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
+      return d;
+    }
+    const dx = p1.x - p0.x, dy = p1.y - p0.y;
+    const len = Math.max(1, Math.hypot(dx, dy));
     const n = Number(seed) || 0;
     const bend = ((n % 9) - 4);
-    const lift = Math.min(86, 16 + dist * 0.07) + bend * 4;
-    const cy = Math.min(a.y, b.y) - lift;
-    const side = dx === 0 ? Math.min(52, 18 + dist * 0.05) : 0;
-    const sway = bend * 4.2;
-    const x1 = a.x + dx * 0.22 + (dx === 0 ? side : 0) + sway;
-    const x2 = b.x - dx * 0.22 - (dx === 0 ? side : 0) + sway;
-    return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
+    const nx = -dy / len, ny = dx / len;
+    const off = bend * 2.6;
+    const cx = (p0.x + p1.x) / 2 + nx * off;
+    const cy = (p0.y + p1.y) / 2 + ny * off;
+    let d = 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2);
+    if (stubA) d += ' L' + p0.x.toFixed(2) + ' ' + p0.y.toFixed(2);
+    d += ' Q' + cx.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2);
+    if (stubB) d += ' L' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
+    return d;
   };
 
   Editor.prototype.wireRouteSeed = function (w) {
@@ -975,10 +991,21 @@
   Editor.prototype.renderWires = function () {
     let html = '';
     const selectedId = this.selection && this.selection.kind === 'wire' ? this.selection.id : null;
+    const obstacles = this.scene.components.map((comp) => {
+      const def = E.DEFS[comp.type];
+      if (!def || !def.bounds) return null;
+      const b = def.bounds;
+      return { id: comp.id, x: comp.x + b.x - 5, y: comp.y + b.y - 5, w: b.w + 10, h: b.h + 10 };
+    }).filter(Boolean);
+    this._wirePathCache = {};
     (this.scene.wires || []).forEach((w, index) => {
       const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
       if (!a || !b) return;
-      const d = this.wirePath(a, b, this.wireRouteSeed(w) + index);
+      const blocked = obstacles.filter((o) => o.id !== w.a.comp && o.id !== w.b.comp);
+      const stubA = this.pinStub(w.a, 14);
+      const stubB = this.pinStub(w.b, 14);
+      const d = this.wirePath(a, b, this.wireRouteSeed(w) + index, blocked, stubA, stubB);
+      this._wirePathCache[w.id] = d;
       const role = this.wireColorClass(w);
       const state = role ? '' : this.wireSimClass(w);
       const sel = w.id === selectedId ? ' sel' : '';
@@ -1002,6 +1029,10 @@
       const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
       if (!a || !b) return;
       const role = this.wireColorClass(w);
+      const sa = this.pinStub(w.a, 13);
+      const sb = this.pinStub(w.b, 13);
+      if (sa) html += '<path class="wire-end-stub ' + role + '" d="M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' L' + sa.x.toFixed(2) + ' ' + sa.y.toFixed(2) + '"/>';
+      if (sb) html += '<path class="wire-end-stub ' + role + '" d="M' + b.x.toFixed(2) + ' ' + b.y.toFixed(2) + ' L' + sb.x.toFixed(2) + ' ' + sb.y.toFixed(2) + '"/>';
       html += '<circle class="wire-cap-focus ' + role + '" cx="' + a.x.toFixed(2) + '" cy="' + a.y.toFixed(2) + '" r="3"/>';
       html += '<circle class="wire-cap-focus ' + role + '" cx="' + b.x.toFixed(2) + '" cy="' + b.y.toFixed(2) + '" r="3"/>';
     });
@@ -1011,7 +1042,7 @@
         const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
         if (a && b) {
           const index = this.scene.wires.indexOf(w);
-          const d = this.wirePath(a, b, this.wireRouteSeed(w) + index);
+          const d = (this._wirePathCache && this._wirePathCache[w.id]) || this.wirePath(a, b, this.wireRouteSeed(w) + index);
           const role = this.wireColorClass(w);
           const state = role ? '' : this.wireSimClass(w);
           html += '<g class="wire-group wire-focus-group">' +
