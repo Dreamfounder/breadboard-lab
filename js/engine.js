@@ -408,8 +408,6 @@
     }
     wire(s, 'r1', '2', 'led1', 'a', 'green');
     wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
-    // Starter kit: parts are placed, but every wire is intentionally removed.
-    s.wires = [];
     return s;
   }
 
@@ -420,7 +418,9 @@
     const r = createComponent('resistor', 256, 388, { resistance: 1000 }); r.id = 'r1';
     const led = createComponent('led', 347, 401, { color: 'red' }); led.id = 'led1';
     s.components.push(psu, r, led);
-    s.wires = [];
+    wire(s, 'psu1', 'V+', 'r1', '1', 'red');
+    wire(s, 'r1', '2', 'led1', 'a', 'green');
+    wire(s, 'led1', 'k', 'psu1', 'GND', 'black');
     return s;
   };
   Templates['lab01-nand'] = function () { return labChipDemo('ic74hc20', 'Lab 01 · 74HC20 NAND', 'lab01-nand', { fourInput: true, ledColor: 'red' }); };
@@ -573,7 +573,6 @@
     wire(s, 'and1', '3', 'r2', '1', 'green');
     wire(s, 'r2', '2', 'led2', 'a', 'green');
     wire(s, 'led2', 'k', 'psu1', 'GND', 'black');
-    s.wires = [];
     return s;
   };
 
@@ -622,7 +621,18 @@
     wire(s, 'or1', '3', 'rCout', '1', 'green');
     wire(s, 'rCout', '2', 'ledCout', 'a', 'green');
     wire(s, 'ledCout', 'k', 'psu1', 'GND', 'black');
-    s.wires = [];
+    return s;
+  };
+
+  Templates['lab01-final'] = function () {
+    const s = baseScene('Lab 01 · 终验 · 五门验证台从零搭建');
+    s.template = 'lab01-final';
+    return s;
+  };
+
+  Templates['lab02-final'] = function () {
+    const s = baseScene('Lab 02 · 终验 · 全加器从零搭建');
+    s.template = 'lab02-final';
     return s;
   };
 
@@ -1436,6 +1446,32 @@
         { key: 'lab-run', text: '运行仿真，自己验证八组输入并填写真值表' }
       ],
       success: '全加器接通了。回到关卡页，把八行真值表自己填完，用检查功能确认。'
+    },
+    'lab01-final': {
+      kicker: 'Lab 01 · 终验',
+      title: '从空白面包板搭建五门验证台',
+      summary: '画布上没有零件。自己摆放五片 Lab 01 芯片、五组输出和输入，完成整份 Lab 的最终电路。',
+      steps: [
+        { key: 'lab-final-parts', text: '从元件库放置五片 Lab 01 芯片、2 个开关、5 个 1kΩ、5 个 LED 和电源' },
+        { key: 'lab-power', text: '给五片芯片都接好电源，逐片检查是否真的通电' },
+        { key: 'lab-inputs', text: '接好共享输入；74HC20/21 的 C/D 该接什么？自己判断' },
+        { key: 'lab-output', text: '每片输出都经 1kΩ 接 LED，并让 LED 阴极回到 GND' },
+        { key: 'lab-run', text: '运行仿真，逐片验证并填完五张真值表' }
+      ],
+      success: '五门验证台完成。你已经从空画布独立搭出了 Lab 01 的完整结果。'
+    },
+    'lab02-final': {
+      kicker: 'Lab 02 · 终验',
+      title: '从空白面包板搭建全加器',
+      summary: '没有零件、没有接线。自己摆放三片芯片与输入/输出元件，完成 Lab 02 的最终电路。',
+      steps: [
+        { key: 'lab-final-parts', text: '从元件库放置 74HC86、74HC08、74HC32、3 个开关、2 个 1kΩ、2 个 LED 和电源' },
+        { key: 'lab-power', text: '给三片芯片都接好电源，并检查每一片都真正通电' },
+        { key: 'lab-inputs', text: '自己决定两级半加器的连接：S1、C1、C2 分别应该去哪里？' },
+        { key: 'lab-output', text: '把 Sum 和 Cout 分别接到电阻与 LED，并检查进位是否经过 OR' },
+        { key: 'lab-run', text: '运行仿真，自己验证八组输入并填完真值表' }
+      ],
+      success: '终验完成。空画布上的全加器已经能工作，这就是 Lab 02 的最终交付电路。'
     }
   };
 

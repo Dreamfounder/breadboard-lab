@@ -93,7 +93,7 @@
         const level = BBL.LABS.getLevel(seg[1]);
         BBL.views.labLevel(view, seg[1]);
         const track = level ? BBL.LABS.getTrack(level.track) : null;
-        setTitle(level ? track.label + ' · Level ' + level.number + ' · ' + level.title : '未找到关卡');
+        setTitle(level ? track.label + (level.final ? ' · FINAL' : ' · Level ' + level.number) + ' · ' + level.title : '未找到关卡');
       } else {
         BBL.views.labs(view);
         setTitle('Lab 练习');

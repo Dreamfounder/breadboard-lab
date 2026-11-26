@@ -676,19 +676,26 @@
     this.$emptyHint.hidden = !show;
     if (!show) { this.$emptyHint.innerHTML = ''; return; }
     const sandbox = this.mode === 'sandbox';
+    const finalLab = !!(this.labId && /-final$/.test(this.labId));
     this.$emptyHint.innerHTML = '<div class="empty-hint-inner">' +
-      '<div class="empty-hint-art">' + svgIcon('chip') + '</div>' +
-      '<h3>' + (sandbox ? '从一颗元件开始' : '画布已经清空') + '</h3>' +
-      '<p>' + (sandbox
-        ? '这里没有固定任务。拖入电源、电阻和 LED，搭一条自己的回路；也可以先载入一个示例。'
-        : '从元件库拖入电源、电阻和 LED，重新搭一条回路；也可以载入示例，或按 Ctrl / ⌘ + Z 撤销刚才的操作。') + '</p>' +
+      '<div class="empty-hint-art">' + svgIcon(finalLab ? 'target' : 'chip') + '</div>' +
+      '<h3>' + (finalLab ? '这是空白终验画布' : sandbox ? '从一颗元件开始' : '画布已经清空') + '</h3>' +
+      '<p>' + (finalLab
+        ? '终验关没有预置零件。打开右侧元件库，自己摆放芯片、开关、电阻、LED 和电源，再开始接线。'
+        : sandbox
+          ? '这里没有固定任务。拖入电源、电阻和 LED，搭一条自己的回路；也可以先载入一个示例。'
+          : '从元件库拖入电源、电阻和 LED，重新搭一条回路；也可以载入示例，或按 Ctrl / ⌘ + Z 撤销刚才的操作。') + '</p>' +
       '<div class="empty-hint-actions"><button class="btn primary sm" data-action="open-library">' + svgIcon('cube') + ' 打开元件库</button>' +
-      '<button class="btn sm" data-action="load-example">' + svgIcon('sparkle') + ' 载入示例</button></div>' +
+      (finalLab ? '' : '<button class="btn sm" data-action="load-example">' + svgIcon('sparkle') + ' 载入示例</button>') + '</div>' +
       '<div class="empty-hint-tip">' + svgIcon('drag') + ' 滚轮 / 双指缩放 · 拖动空白平移</div>' +
       '</div>';
   };
 
   Editor.prototype.loadExample = function () {
+    if (this.labId && /-final$/.test(this.labId)) {
+      this.toast('终验关不能载入预置示例。请从元件库自己摆放零件。', 'warn');
+      return;
+    }
     this.stopSimulation();
     this.scene = E.createScene('led-basic');
     this.scene.name = this.mode === 'sandbox' ? '自由实验 · LED 示例' : '实验一 · 点亮第一颗 LED';
@@ -2191,6 +2198,16 @@
             const psu = comps.find((c) => c.type === 'power-supply' || c.type === 'battery-9v' || c.type === 'coin-cell' || c.type === 'aa-battery');
             const pins = psu ? (psu.type === 'power-supply' ? ['V+', 'GND'] : [psu.type === 'battery-9v' ? '+' : '+', '-']) : [];
             return !!psu && pins.every((p) => conn(psu.id, p));
+          }
+          case 'lab-final-parts': {
+            const hasSource = comps.some((c) => c.type === 'power-supply' || c.type === 'battery-9v' || c.type === 'coin-cell' || c.type === 'aa-battery');
+            const switches = comps.filter((c) => c.type === 'slide-switch').length;
+            const resistors = comps.filter((c) => c.type === 'resistor').length;
+            const leds = comps.filter((c) => c.type === 'led').length;
+            if (this.taskId === 'lab02-final') {
+              return hasSource && has('ic74hc86') && has('ic74hc08') && has('ic74hc32') && switches >= 3 && resistors >= 2 && leds >= 2;
+            }
+            return hasSource && ['ic74hc20', 'ic74hc04', 'ic74hc21', 'ic74hc86', 'ic74hc32'].every((t) => has(t)) && switches >= 2 && resistors >= 5 && leds >= 5;
           }
           case 'lab-path': {
             const r = comps.find((c) => c.type === 'resistor');

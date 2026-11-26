@@ -84,6 +84,11 @@
 .lab-level-cta { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 650; color: var(--brand); padding: 5px 7px; border-radius: 6px; }
 .lab-level-row:hover .lab-level-cta { background: var(--brand-soft); }
 .lab-level-cta .icon { width: 11px; height: 11px; }
+.lab-level-row.final { margin: 5px 0; background: linear-gradient(100deg, #f7faff, #fbfdff); border: 1px solid #dbe7f8; }
+.lab-level-row.final:hover { background: #f3f8ff; border-color: #bfd5f2; }
+.lab-level-row.final .lab-level-num { background: #101828; border-color: #101828; color: #fff; }
+.lab-level-row.final.complete .lab-level-num { background: var(--accent-soft); border-color: #d1f1e6; color: var(--accent-deep); }
+.lab-final-tag { display: inline-flex; align-items: center; height: 16px; padding: 0 5px; border-radius: 4px; background: #101828; color: #6ee7b7; font-family: var(--font-mono); font-size: 7.5px; font-weight: 700; letter-spacing: .08em; }
 
 .labs-how { margin: 34px 0 10px; }
 .labs-how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -115,6 +120,17 @@
 .lab-part svg { width: 19px; height: 16px; overflow: visible; }
 .lab-part b { font-size: 8.5px; font-weight: 600; color: var(--muted); }
 .lab-part i { font-style: normal; font-size: 8px; color: var(--muted-2); }
+.lab-choice-list { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 7px; padding-top: 7px; border-top: 1px dashed #e7edf6; }
+.lab-choice-label { font-size: 8px; color: var(--brand); font-weight: 650; margin-right: 1px; }
+.lab-part.choice { background: #f4f8ff; border-color: #dce8f9; }
+.lab-part.choice b { color: var(--brand); }
+.lab-start-banner.final { background: #fffaf0; border-color: #fde9c8; }
+.lab-start-banner.final > .icon { color: #b45309; }
+.lab-start-banner.final b { color: #92500a; }
+.lab-final-rules { display: flex; gap: 9px; align-items: flex-start; padding: 11px 12px; border-radius: 8px; background: #fffaf0; border: 1px solid #fde9c8; }
+.lab-final-rules > .icon { width: 16px; height: 16px; flex: none; color: #b45309; margin-top: 1px; }
+.lab-final-rules b { display: block; font-size: 10px; color: #92500a; }
+.lab-final-rules span { display: block; margin-top: 2px; font-size: 10px; line-height: 1.65; color: #8a6a48; }
 
 .lab-detail-body { display: grid; grid-template-columns: minmax(0, 1fr) 266px; gap: 30px; padding-top: 30px; align-items: start; }
 .lab-detail-main { min-width: 0; }

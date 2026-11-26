@@ -12,8 +12,8 @@
       course: 'WIX1003 Computer Systems & Organization',
       source: 'Lab 01: Electronics',
       color: 'blue',
-      intro: '从电源、面包板和 LED 开始，再逐一验证 74HC20、74HC04、74HC21、74HC86、74HC32 的逻辑功能，完成实验报告里的真值表。每一关的元件会先摆好，但导线全部断开，需要你自己接线。',
-      goals: ['认识 Vcc / GND 与逻辑电平', '会看 DIP-14 芯片引脚编号', '用 1kΩ 电阻保护 LED', '独立验证 5 种逻辑门']
+      intro: '从电源、面包板和 LED 开始，再逐一验证 74HC20、74HC04、74HC21、74HC86、74HC32 的逻辑功能，完成实验报告里的真值表。每一关的电路会先接好作为参考；最后在空白画布上完成终验。',
+      goals: ['认识 Vcc / GND 与逻辑电平', '会看 DIP-14 芯片引脚编号', '用 1kΩ 电阻保护 LED', '独立验证 5 种逻辑门', '从空白画布完成一门终验']
     },
     {
       id: 'lab02',
@@ -23,8 +23,8 @@
       course: 'WIX1003 Computer Systems & Organization',
       source: 'Lab 02: Combinational Circuit Design',
       color: 'green',
-      intro: '把 XOR、AND、OR 组合成半加器与全加器，理解 Sum / Carry 的来处，并验证完整的真值表。元件已就位，但每一关都从断开的导线开始。',
-      goals: ['用 XOR + AND 构造半加器', '用两个半加器 + OR 构造全加器', '理解进位链 Carry', '记录并提交真值表']
+      intro: '把 XOR、AND、OR 组合成半加器与全加器，理解 Sum / Carry 的来处，并验证完整的真值表。先看参考电路，最后在空白画布上独立搭建全加器。',
+      goals: ['用 XOR + AND 构造半加器', '用两个半加器 + OR 构造全加器', '理解进位链 Carry', '记录并提交真值表', '从空白画布搭建全加器']
     }
   ];
 
@@ -300,6 +300,41 @@
       submit: '提交五片 IC 的完整真值表，以及每片电路的 Tinkercad 截图。'
     },
     {
+      id: 'lab01-final',
+      track: 'lab01',
+      number: '07',
+      title: 'Lab 01 终验：从零搭建五门验证台',
+      en: 'Final Challenge · Build the Five-Gate Bench',
+      minutes: 35,
+      difficulty: '终验',
+      template: 'lab01-final',
+      taskId: 'lab01-final',
+      final: true,
+      brief: '空白面包板，没有零件。自己摆放五片 IC、输入开关、五组输出和电源。',
+      objective: '不依赖现成电路，从空画布摆放 Lab 01 的五片芯片，完成一个能同时验证五种逻辑门的终验电路。',
+      parts: ['ic74hc20', 'ic74hc04', 'ic74hc21', 'ic74hc86', 'ic74hc32', 'slide-switch', 'slide-switch', 'resistor', 'resistor', 'resistor', 'resistor', 'resistor', 'led', 'led', 'led', 'led', 'led', 'power-supply'],
+      background: [
+        '终验的画布是空的：没有芯片，没有开关，也没有导线。你需要自己从元件库把零件摆到面包板上。',
+        '这次要摆齐 Lab 01 的五片芯片：74HC20、74HC04、74HC21、74HC86、74HC32，并为每一片准备输出指示。输入可以用两个开关共享，也可以按自己的方案接线。',
+        '终验不提供完整接线表。你要把前面五关学到的流程组合起来：认引脚、供电、接输入、接输出，再逐片验证。'
+      ],
+      steps: [
+        { title: '选齐五片芯片', body: '从元件库放置 74HC20、74HC04、74HC21、74HC86、74HC32，注意每片都跨中央凹槽。' },
+        { title: '准备输入与输出', body: '放置两个滑动开关；为每片芯片准备 1kΩ 电阻和 LED，共五组输出。' },
+        { title: '逐片接电源', body: '五片芯片都要接 Vcc 和 GND。先把电源网络搭好，再开始接信号，避免接完才发现某片没电。' },
+        { title: '逐片完成信号', body: '从第一片开始，把开关接到输入、输出经电阻接 LED；每完成一片就先验证，再继续下一片。' },
+        { title: '整体验证', body: '运行仿真，逐片检查输出，把五张真值表填完。终验不要求一次把所有输入同时接对，但每片最终都要能工作。' }
+      ],
+      wiring: [],
+      pitfalls: [
+        '画布是空的，忘记从元件库添加电源或某一片芯片。',
+        '五片芯片数量多，容易漏掉其中一片的电源或输出。',
+        '没有处理 74HC20/74HC21 的未使用输入。'
+      ],
+      checkpoints: ['五片 Lab 01 芯片都已放置', '五片芯片都已通电', '五组输出都已接好', '运行验证并填完五张真值表'],
+      submit: '提交五门验证台的完整电路图、五张真值表和最终截图。这就是 Lab 01 要求的完整结果。'
+    },
+    {
       id: 'lab02-half',
       track: 'lab02',
       number: '01',
@@ -405,6 +440,59 @@
       ],
       checkpoints: ['三片 IC 都接 V+/GND', 'S1 同时进入第二级 XOR 和 AND', 'C1/C2 经 OR 合并', '八行结果自己填写并检查'],
       submit: '提交全加器真值表、完整电路图，以及 111 输入时的截图。'
+    },
+    {
+      id: 'lab02-final',
+      track: 'lab02',
+      number: '03',
+      title: 'Lab 02 终验：从零搭建全加器',
+      en: 'Final Challenge · Full Adder from Scratch',
+      minutes: 35,
+      difficulty: '终验',
+      template: 'lab02-final',
+      taskId: 'lab02-final',
+      final: true,
+      brief: '空白面包板，没有零件。自己摆放三片 IC、三个开关和两个输出，完成全加器。',
+      objective: '不依赖预置电路，从空画布完成 Lab 02 的最终交付：一个能验证八行真值表的全加器。',
+      parts: ['ic74hc86', 'ic74hc08', 'ic74hc32', 'slide-switch', 'slide-switch', 'slide-switch', 'resistor', 'resistor', 'led', 'led', 'power-supply'],
+      background: [
+        '这是整个 Lab 练习的最后一关：画布上没有零件，也没有任何导线。你需要从元件库自己摆出三片 IC、三个输入开关、两个 1kΩ 电阻、两个 LED 和电源。',
+        '全加器由两个半加器和一个 OR 组成。第一级算 A⊕B 和 A·B，第二级再把第一级的 S1 与 Cin 相加，最后把两个进位合并。',
+        '终验不提供完整接线表。你应该利用前面半加器关卡的接线经验，自己规划 S1、C1、C2 的走向。卡住时先回看 Lab 02 半加器关卡的教程。'
+      ],
+      steps: [
+        { title: '摆放全部零件', body: '从元件库添加：74HC86、74HC08、74HC32 各一片，三个滑动开关，两个 1kΩ，两个 LED，一个 5V 电源。' },
+        { title: '先保证三片芯片供电', body: '三片 IC 都需要 Vcc 和 GND。先把电源接好，再开始接信号，避免中途发现芯片没电。' },
+        { title: '搭第一级半加器', body: '先只用 A、B 做出第一级的和 S1 与进位 C1，接两个临时输出或 LED 验证这一级是否正确。' },
+        { title: '搭第二级并合并进位', body: '把 S1 和 Cin 送入第二级，得到 Sum 和 C2；再把 C1、C2 送进 OR 得到 Cout。' },
+        { title: '验证八行', body: '运行仿真，逐行设置 A/B/Cin，自己填写全加器真值表，并完成 Lab 02 的最终截图。' }
+      ],
+      wiring: [],
+      truth: {
+        title: '全加器终验真值表',
+        headers: ['A', 'B', 'Cin', 'Sum', 'Cout'],
+        inputs: 3,
+        hint: '终验不直接给答案。先把全加器拆成两个半加器，再处理两个进位的合并。',
+        rows: [
+          ['0', '0', '0', '0', '0'],
+          ['0', '0', '1', '1', '0'],
+          ['0', '1', '0', '1', '0'],
+          ['0', '1', '1', '0', '1'],
+          ['1', '0', '0', '1', '0'],
+          ['1', '0', '1', '0', '1'],
+          ['1', '1', '0', '0', '1'],
+          ['1', '1', '1', '1', '1']
+        ],
+        note: '先自己填完八行，再点检查；系统只提示错行。'
+      },
+      pitfalls: [
+        '忘记给其中一片 IC 供电，导致某一级完全无输出。',
+        '把 S1 只送入第二级 XOR，忘记送入第二级 AND，Cout 会出错。',
+        '两个进位没有经过 OR 就直接相连，造成输出冲突。',
+        '没有从元件库添加足够的输入开关或输出 LED。'
+      ],
+      checkpoints: ['三片 IC 都已放置并通电', '三个输入开关都接好', 'Sum 与 Cout 各有独立输出', '八行真值表自己填写并检查'],
+      submit: '提交完整全加器电路图、八行真值表和最终截图。这一关的电路就是 Lab 02 的最终交付。'
     }
   ];
 
@@ -412,7 +500,7 @@
   function getLevel(id) { return LEVELS.find((l) => l.id === id) || null; }
   function levelsOf(trackId) { return LEVELS.filter((l) => l.track === trackId); }
 
-  const STORAGE_KEY = 'bbl.labs.v2';
+  const STORAGE_KEY = 'bbl.labs.v3';
   function readProgress() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch (e) { return {}; }
   }

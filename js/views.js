@@ -530,13 +530,18 @@
 
   function labPartsHtml(level) {
     const seen = {};
-    return '<div class="lab-part-list">' + level.parts.filter((id) => {
+    const base = '<div class="lab-part-list">' + level.parts.filter((id) => {
       if (seen[id]) return false; seen[id] = true; return true;
     }).map((id) => {
       const p = BBL.partById(id);
       if (!p) return '';
       const count = level.parts.filter((x) => x === id).length;
       return '<span class="lab-part">' + Art.icon(id) + '<b>' + esc(p.name) + '</b>' + (count > 1 ? '<i>×' + count + '</i>' : '') + '</span>';
+    }).join('') + '</div>';
+    if (!level.choices) return base;
+    return base + '<div class="lab-choice-list"><span class="lab-choice-label">任选 1 片</span>' + level.choices.map((id) => {
+      const p = BBL.partById(id);
+      return p ? '<span class="lab-part choice" title="' + esc(p.name) + '">' + Art.icon(id) + '<b>' + esc(p.name) + '</b></span>' : '';
     }).join('') + '</div>';
   }
 
@@ -599,7 +604,8 @@
       '<h3 class="lab-guide-title">操作步骤</h3>' +
       '<ol class="lab-guide-steps">' + level.steps.map((s) => '<li><div><b>' + esc(s.title) + '</b><span>' + esc(s.body) + '</span></div></li>').join('') + '</ol>' +
       (level.truth ? '<h3 class="lab-guide-title">真值表</h3>' + labTruthHtml(level.truth, level.id) : '') +
-      '<details class="lab-guide-hints"><summary>' + svgIcon('branch') + ' 需要接线提示时展开</summary><div class="lab-guide-wiring">' + level.wiring.map((w) => '<div><span>' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span>' + esc(w.to) + '</span></div>').join('') + '</div></details>' +
+      '<details class="lab-guide-hints"' + (level.final ? ' hidden' : '') + '><summary>' + svgIcon('branch') + ' 需要接线提示时展开</summary><div class="lab-guide-wiring">' + level.wiring.map((w) => '<div><span>' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span>' + esc(w.to) + '</span></div>').join('') + '</div></details>' +
+      (level.final ? '<div class="lab-guide-tip">' + svgIcon('target') + '<span><b>终验规则：</b>这一关从空白画布开始，不提供完整接线表。先自己摆放零件、规划连接；卡住时回看对应的练习关。</span></div>' : '') +
       '<div class="lab-guide-tip">' + svgIcon('lightbulb') + '<span><b>常见错误：</b>' + esc(level.pitfalls[0]) + '</span></div>' +
       '</div>';
   }
@@ -639,7 +645,7 @@
           '<div class="lab-track-goals">' + track.goals.map((g) => '<span>' + svgIcon('check') + g + '</span>').join('') + '</div>' +
           '<div class="lab-level-list">' + levels.map((level) => {
             const complete = BBL.LABS.LabProgress.isComplete(level.id);
-            return '<a class="lab-level-row' + (complete ? ' complete' : '') + '" href="#/labs/' + level.id + '"><span class="lab-level-num">' + (complete ? svgIcon('check') : level.number) + '</span><div class="lab-level-main"><div><h3>' + esc(level.title) + '</h3><em>' + esc(level.en) + '</em></div><p>' + esc(level.brief) + '</p><div class="lab-level-meta"><span>' + svgIcon('clock') + level.minutes + ' 分钟</span><span>' + level.difficulty + '</span><span>' + level.parts.length + ' 个元件</span></div></div><span class="lab-level-cta">' + (complete ? '复习' : '开始') + ' ' + svgIcon('arrow-right') + '</span></a>';
+            return '<a class="lab-level-row' + (complete ? ' complete' : '') + (level.final ? ' final' : '') + '" href="#/labs/' + level.id + '"><span class="lab-level-num">' + (complete ? svgIcon('check') : (level.final ? '★' : level.number)) + '</span><div class="lab-level-main"><div><h3>' + esc(level.title) + '</h3>' + (level.final ? '<span class="lab-final-tag">FINAL</span>' : '') + '<em>' + esc(level.en) + '</em></div><p>' + esc(level.brief) + '</p><div class="lab-level-meta"><span>' + svgIcon('clock') + level.minutes + ' 分钟</span><span>' + level.difficulty + '</span><span>' + (level.parts.length + (level.choices ? 1 : 0)) + ' 个元件</span></div></div><span class="lab-level-cta">' + (complete ? '复习' : (level.final ? '接受挑战' : '开始')) + ' ' + svgIcon('arrow-right') + '</span></a>';
           }).join('') + '</div></section>';
       }).join('') + '</div>' +
       '<section class="labs-how"><div class="section-head"><div><div class="eyebrow amber">HOW IT WORKS</div><h2>每一关怎么玩</h2></div></div><div class="labs-how-grid">' +
@@ -662,21 +668,25 @@
     const href = labEditorHref(level);
     mount.innerHTML = '<div class="page lab-detail-page">' +
       '<section class="lab-detail-hero ' + track.color + '"><div class="container">' +
-      '<div class="labs-breadcrumb"><div class="breadcrumb"><a href="#/labs">Lab 练习</a><span class="sep">/</span><a href="#/labs">' + track.label + '</a><span class="sep">/</span><span>Level ' + level.number + '</span></div>' + (complete ? '<span class="lab-complete-pill">' + svgIcon('check-circle') + ' 已完成</span>' : '') + '</div>' +
-      '<div class="lab-detail-grid"><div class="lab-detail-intro"><span class="eyebrow ' + (track.color === 'green' ? 'green' : '') + '">' + track.label + ' · LEVEL ' + level.number + '</span><h1>' + esc(level.title) + '</h1><p class="lab-en">' + esc(level.en) + '</p><p class="lab-objective">' + esc(level.objective) + '</p><div class="lab-hero-actions"><a class="btn primary lg" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><a class="btn lg" href="#/labs">' + svgIcon('grid') + ' 全部关卡</a></div><div class="lab-hero-meta"><span>' + svgIcon('clock') + level.minutes + ' 分钟</span><span>' + svgIcon('target') + level.difficulty + '</span><span>' + svgIcon('chip') + level.parts.length + ' 个元件</span></div></div>' +
+      '<div class="labs-breadcrumb"><div class="breadcrumb"><a href="#/labs">Lab 练习</a><span class="sep">/</span><a href="#/labs">' + track.label + '</a><span class="sep">/</span><span>' + (level.final ? 'FINAL' : 'Level ' + level.number) + '</span></div>' + (complete ? '<span class="lab-complete-pill">' + svgIcon('check-circle') + ' 已完成</span>' : '') + '</div>' +
+      '<div class="lab-detail-grid"><div class="lab-detail-intro"><span class="eyebrow ' + (track.color === 'green' ? 'green' : '') + '">' + track.label + ' · ' + (level.final ? 'FINAL CHALLENGE' : 'LEVEL ' + level.number) + '</span><h1>' + esc(level.title) + '</h1><p class="lab-en">' + esc(level.en) + '</p><p class="lab-objective">' + esc(level.objective) + '</p><div class="lab-hero-actions"><a class="btn primary lg" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><a class="btn lg" href="#/labs">' + svgIcon('grid') + ' 全部关卡</a></div><div class="lab-hero-meta"><span>' + svgIcon('clock') + level.minutes + ' 分钟</span><span>' + svgIcon('target') + level.difficulty + '</span><span>' + svgIcon('chip') + (level.parts.length + (level.choices ? 1 : 0)) + ' 个元件</span></div></div>' +
       '<div class="lab-detail-card"><div class="lab-detail-card-head"><span>本关元件</span><span class="pill">' + track.label + '</span></div>' + labPartsHtml(level) + '<div class="lab-detail-card-foot"><span>' + svgIcon('info') + ' 进入实验台后按任务卡操作</span></div></div></div>' +
       '</div></section>' +
       '<div class="container lab-detail-body"><div class="lab-detail-main">' +
-      '<div class="lab-start-banner">' + svgIcon('branch') + '<div><b>本关从零开始</b><span>芯片、开关、电阻和 LED 已经摆在面包板上，但<strong>所有导线都是断开的</strong>。请按任务卡自己接线；卡住时再展开下方的接线提示。</span></div></div>' +
+      (level.final
+        ? '<div class="lab-start-banner final">' + svgIcon('target') + '<div><b>终验关 · 空白画布</b><span>这一关<strong>没有零件，也没有导线</strong>。请打开右侧元件库，自己摆放芯片、开关、电阻和 LED，再独立完成接线。</span></div></div>'
+        : '<div class="lab-start-banner">' + svgIcon('branch') + '<div><b>参考练习</b><span>这一关的电路已经接好，方便你先观察标准做法。建议先运行、再试着自己复现；最后的终验关会给你空白画布。</span></div></div>') +
       '<section class="lab-section"><div class="lab-section-head"><span>01</span><h2>原理背景</h2></div><div class="lab-prose">' + level.background.map((p) => '<p>' + esc(p) + '</p>').join('') + '</div></section>' +
       '<section class="lab-section"><div class="lab-section-head"><span>02</span><h2>操作步骤</h2></div><ol class="lab-steps">' + level.steps.map((s, i) => '<li><span class="lab-step-num">' + (i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p>' + esc(s.body) + '</p></div></li>').join('') + '</ol></section>' +
-      '<section class="lab-section"><div class="lab-section-head"><span>03</span><h2>接线提示</h2></div><p class="lab-hint-intro">先自己尝试。确实需要时再展开逐线提示。</p><details class="lab-detail-hints"><summary>' + svgIcon('branch') + ' 展开接线提示</summary><div class="lab-wiring-table">' + level.wiring.map((w) => '<div class="lab-wire-row"><span class="from">' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span class="to">' + esc(w.to) + '</span><em>' + esc(w.why) + '</em></div>').join('') + '</div></details></section>' +
+      (level.final
+        ? '<section class="lab-section"><div class="lab-section-head"><span>03</span><h2>终验规则</h2></div><div class="lab-final-rules">' + svgIcon('target') + '<div><b>不提供完整接线表</b><span>这一关检验你是否能不依赖现成接法完成电路。卡住时先回看对应的练习关；仍需要帮助时，可以展开思路提示。</span></div></div><details class="lab-detail-hints"><summary>' + svgIcon('lightbulb') + ' 展开思路提示</summary><div class="lab-guide-tip">' + svgIcon('lightbulb') + '<span><b>思路：</b>' + esc(level.background[level.background.length - 1]) + '</span></div></details></section>'
+        : '<section class="lab-section"><div class="lab-section-head"><span>03</span><h2>接线提示</h2></div><p class="lab-hint-intro">先自己观察参考电路。确实需要时再展开逐线提示。</p><details class="lab-detail-hints"><summary>' + svgIcon('branch') + ' 展开接线提示</summary><div class="lab-wiring-table">' + level.wiring.map((w) => '<div class="lab-wire-row"><span class="from">' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span class="to">' + esc(w.to) + '</span><em>' + esc(w.why) + '</em></div>').join('') + '</div></details></section>') +
       (level.truth ? '<section class="lab-section"><div class="lab-section-head"><span>04</span><h2>' + esc(level.truth.title) + '</h2></div>' + labTruthHtml(level.truth, level.id) + '<div class="lab-table-tip">' + svgIcon('lightbulb') + ' 先自己填写输出，再点“检查我的真值表”。系统只会告诉你哪几行不对，不会直接给答案。</div></section>' : '') +
       '<section class="lab-section"><div class="lab-section-head"><span>05</span><h2>常见错误</h2></div><div class="lab-pitfalls">' + level.pitfalls.map((p) => '<div>' + svgIcon('warning') + '<span>' + esc(p) + '</span></div>').join('') + '</div></section>' +
       '<section class="lab-section"><div class="lab-section-head"><span>06</span><h2>完成检查</h2></div><div class="lab-checks">' + level.checkpoints.map((c) => '<div>' + svgIcon('check-circle') + '<span>' + esc(c) + '</span></div>').join('') + '</div><div class="lab-submit"><b>提交建议</b><p>' + esc(level.submit) + '</p></div></section>' +
       '<div class="lab-pager">' + (prev ? '<a href="#/labs/' + prev.id + '"><span>上一关</span><b>' + esc(prev.title) + '</b></a>' : '<span></span>') + (next ? '<a class="next" href="#/labs/' + next.id + '"><span>下一关</span><b>' + esc(next.title) + '</b></a>' : '') + '</div>' +
       '</div>' +
-      '<aside class="lab-detail-side"><div class="lab-side-card"><div class="lab-side-label">本关任务</div><div class="lab-side-progress"><div><b>' + (complete ? '已完成' : '待完成') + '</b><span>' + track.label + ' · Level ' + level.number + '</span></div>' + (complete ? '<i class="done">' + svgIcon('check') + '</i>' : '<i>' + level.number + '</i>') + '</div><a class="btn primary block" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><p class="lab-side-note">' + svgIcon('info') + ' 完成实验台任务卡后自动记录。元件已摆好、导线全部断开；完成接线并运行后才会记录本关。</p><button class="btn ghost block" data-lab-guide="' + level.id + '">' + svgIcon('keyboard') + ' 在弹窗中查看步骤</button></div>' +
+      '<aside class="lab-detail-side"><div class="lab-side-card"><div class="lab-side-label">本关任务</div><div class="lab-side-progress"><div><b>' + (complete ? '已完成' : '待完成') + '</b><span>' + track.label + ' · ' + (level.final ? 'FINAL' : 'Level ' + level.number) + '</span></div>' + (complete ? '<i class="done">' + svgIcon('check') + '</i>' : '<i>' + (level.final ? '★' : level.number) + '</i>') + '</div><a class="btn primary block" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><p class="lab-side-note">' + svgIcon('info') + ' 参考练习与终验的任务卡都会自动记录进度。</p><button class="btn ghost block" data-lab-guide="' + level.id + '">' + svgIcon('keyboard') + ' 在弹窗中查看步骤</button></div>' +
       '<div class="lab-side-card"><div class="lab-side-label">实验材料</div>' + labPartsHtml(level) + '</div>' +
       '<div class="lab-side-card source"><div class="lab-side-label">来源</div><p>' + esc(track.course) + '</p><b>' + esc(track.source) + '</b><span class="lab-source-note">按课程 Lab 内容改编为可交互关卡</span></div>' +
       '</aside></div></div>' + footerHTML();
