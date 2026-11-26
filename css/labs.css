@@ -45,6 +45,14 @@
 .labs-progress-marks i.green { background: var(--accent); }
 
 .labs-body { padding-top: 34px; }
+.labs-basics { margin-bottom: 22px; padding: 20px 22px; border-radius: 14px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow-xs); }
+.labs-basics-head .eyebrow { margin-bottom: 4px; }
+.labs-basics-head h2 { font-size: 20px; letter-spacing: -.03em; }
+.labs-basics-head p { margin-top: 3px; font-size: 10.5px; color: var(--muted); line-height: 1.6; }
+.labs-basics-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.labs-basics-grid > div { padding: 10px 11px; border-radius: 8px; background: #f8fafd; border: 1px solid #eef2f8; }
+.labs-basics-grid b { display: block; font-size: 10px; color: var(--brand); }
+.labs-basics-grid span { display: block; margin-top: 4px; font-size: 9.5px; line-height: 1.65; color: var(--muted); }
 .labs-tracks { display: flex; flex-direction: column; gap: 20px; }
 .lab-track {
   overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 16px;
@@ -180,6 +188,9 @@
 .lab-start-banner b { display: block; font-size: 10px; color: var(--brand); letter-spacing: .03em; }
 .lab-start-banner span { display: block; margin-top: 2px; font-size: 10.5px; line-height: 1.65; color: var(--muted); }
 .lab-start-banner strong { color: var(--ink); }
+.lab-easy { margin: -8px 0 22px; padding: 14px 16px; border-radius: 10px; background: #fff; border: 1px solid #dbe7f8; box-shadow: var(--shadow-xs); }
+.lab-easy > span { display: inline-flex; align-items: center; height: 19px; padding: 0 6px; border-radius: 4px; background: var(--brand-soft); color: var(--brand); font-size: 8.5px; font-weight: 750; letter-spacing: .06em; }
+.lab-easy p { margin-top: 7px; font-size: 12.5px; line-height: 1.8; color: var(--ink-2); }
 .lab-detail-hints, .lab-guide-hints { margin-top: 8px; border: 1px solid #e2e9f3; border-radius: 8px; background: #fbfcfe; }
 .lab-detail-hints summary, .lab-guide-hints summary { display: flex; align-items: center; gap: 5px; padding: 9px 11px; cursor: pointer; font-size: 10px; font-weight: 600; color: var(--brand); list-style: none; }
 .lab-detail-hints summary::-webkit-details-marker, .lab-guide-hints summary::-webkit-details-marker { display: none; }
@@ -245,6 +256,7 @@
 }
 @media (max-width: 950px) {
   .labs-hero-grid, .lab-detail-grid { grid-template-columns: 1fr; gap: 25px; }
+  .labs-basics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .labs-progress-card { max-width: 520px; transform: none; }
   .labs-hero h1 { font-size: clamp(40px, 8vw, 55px); }
   .labs-how-grid { grid-template-columns: 1fr; gap: 8px; }
@@ -259,6 +271,8 @@
   .lab-wire-row em { grid-column: 1 / -1; padding-left: 0; }
 }
 @media (max-width: 760px) {
+  .labs-basics { padding: 16px; }
+  .labs-basics-grid { grid-template-columns: 1fr 1fr; }
   .labs-hero { padding-top: 23px; padding-bottom: 30px; }
   .labs-breadcrumb { margin-bottom: 20px; }
   .labs-source { display: none; }
@@ -293,6 +307,7 @@
 }
 @media (max-width: 520px) {
   .labs-hero h1 { font-size: 40px; }
+  .labs-basics-grid { grid-template-columns: 1fr; }
   .labs-hero > .container > .labs-hero-grid p { font-size: 12px; }
   .lab-level-num { width: 26px; height: 26px; }
   .lab-level-main h3 { font-size: 11.5px; }

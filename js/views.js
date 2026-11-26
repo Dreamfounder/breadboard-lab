@@ -399,7 +399,7 @@
       if (state.cat !== 'all') list = list.filter((p) => p.cat === state.cat);
       if (state.q) {
         const q = state.q.toLowerCase();
-        list = list.filter((p) => (p.name + ' ' + p.en + ' ' + p.short + ' ' + p.tags.join(' ')).toLowerCase().includes(q));
+        list = list.filter((p) => (p.name + ' ' + p.en + ' ' + p.short + ' ' + (p.plain || '') + ' ' + p.tags.join(' ')).toLowerCase().includes(q));
       }
       count.innerHTML = '共 <b>' + list.length + '</b> 种元件' + (state.cat !== 'all' ? ' · ' + BBL.CAT_LABEL[state.cat] : '');
       if (!list.length) {
@@ -408,7 +408,7 @@
       }
       grid.innerHTML = list.map((p) => '<a class="part-tile" href="#/parts/' + p.id + '">' +
         '<div class="part-tile-art"><span class="cat-tag">' + esc(BBL.CAT_LABEL[p.cat]) + '</span>' + Art.icon(p.id) + '</div>' +
-        '<div class="part-tile-body"><h3>' + esc(p.name) + '</h3><div class="en">' + esc(p.en) + '</div><p>' + esc(p.short) + '</p>' +
+        '<div class="part-tile-body"><h3>' + esc(p.name) + '</h3><div class="en">' + esc(p.en) + '</div><p>' + esc(p.plain || p.short) + '</p>' +
         '<div class="part-tile-foot"><span>' + esc(p.foot) + '</span><span class="go">查看百科 ' + svgIcon('arrow-right') + '</span></div></div></a>').join('');
     }
     mount.querySelector('#parts-q').addEventListener('input', (e) => { state.q = e.target.value.trim(); draw(); });
@@ -436,11 +436,11 @@
       '<div class="part-detail-copy"><div class="breadcrumb"><a href="#/learn">教程</a><span class="sep">/</span><a href="#/parts">元件百科</a><span class="sep">/</span><span>' + esc(BBL.CAT_LABEL[p.cat]) + '</span></div>' +
       '<div class="eyebrow" style="margin-top:10px">' + esc(BBL.CAT_LABEL[p.cat]) + ' · ' + esc(p.foot) + '</div>' +
       '<h1>' + esc(p.name) + '</h1><div class="en">' + esc(p.en) + '</div>' +
-      '<p class="lede">' + esc(p.lede) + '</p>' +
+      '<p class="part-plain-label">用人话说</p><p class="lede">' + esc(p.plain || p.lede) + '</p>' +
       '<div class="chips">' + p.tags.map((t) => '<span class="pill blue">' + esc(t) + '</span>').join('') + '</div></div></div></section>' +
       '<div class="container part-detail-layout"><div class="part-doc">' +
-      '<section class="doc-card"><h2>' + svgIcon('info') + ' 这是什么</h2><p>' + esc(p.lede) + '</p><ul class="doc-list">' + p.usage.map((u) => '<li>' + esc(u) + '</li>').join('') + '</ul></section>' +
-      '<section class="doc-card"><h2>' + svgIcon('pin') + ' 引脚与规格</h2><table class="pin-doc"><thead><tr><th>编号</th><th>名称</th><th>说明</th></tr></thead><tbody>' + p.pins.map((pin) => '<tr><td>' + esc(pin.n) + '</td><td>' + esc(pin.name) + '</td><td>' + esc(pin.desc) + '</td></tr>').join('') + '</tbody></table>' +
+      '<section class="doc-card"><h2>' + svgIcon('info') + ' 这是什么</h2><div class="part-plain-box"><b>人话版</b><p>' + esc(p.plain || p.lede) + '</p></div><p class="part-tech-note">下面的参数和引脚说明是给需要深入的人看的，不需要一次记住。</p><details class="part-tech-details"><summary>想深入一点？展开专业说明</summary><p>' + esc(p.lede) + '</p><ul class="doc-list">' + p.usage.map((u) => '<li>' + esc(u) + '</li>').join('') + '</ul></details></section>' +
+      '<section class="doc-card"><h2>' + svgIcon('pin') + ' 引脚与规格</h2><p class="part-tech-note">接线时再来查这张表即可，不需要背。</p><table class="pin-doc"><thead><tr><th>编号</th><th>名称</th><th>说明</th></tr></thead><tbody>' + p.pins.map((pin) => '<tr><td>' + esc(pin.n) + '</td><td>' + esc(pin.name) + '</td><td>' + esc(pin.desc) + '</td></tr>').join('') + '</tbody></table>' +
       '<div class="spec-table">' + p.specs.map((s) => '<div>' + esc(s[0]) + '</div><div>' + esc(s[1]) + '</div>').join('') + '</div></section>' +
       '<section class="doc-card"><h2>' + svgIcon('warning') + ' 使用注意</h2><div class="doc-list">' + p.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</div><div class="warn-box">' + svgIcon('bolt') + '<p>接线前断电，接好后再上电。第一次通电时先看电源电流，有异常立即断开。</p></div></section>' +
       '<section class="doc-card"><h2>' + svgIcon('flask') + ' 马上做一个小实验</h2><p style="font-weight:600;color:#111827">' + esc(p.experiment.title) + '</p><p>' + esc(p.experiment.body) + '</p><a class="btn primary sm" href="#/sandbox" style="margin-top:14px">' + svgIcon('flask') + ' 在自由实验中试试</a></section>' +
@@ -635,10 +635,16 @@
     mount.innerHTML = '<div class="page labs-page">' +
       '<section class="labs-hero"><div class="container">' +
       '<div class="labs-breadcrumb"><div class="breadcrumb"><a href="#/projects">工作台</a><span class="sep">/</span><span>Lab 练习</span></div><span class="labs-source">' + svgIcon('book') + ' WIX1003 Computer Systems & Organization</span></div>' +
-      '<div class="labs-hero-grid"><div><span class="eyebrow green">LAB PRACTICE · GUIDED MISSIONS</span><h1>把 Lab 练习<br>变成一场<span>闯关</span>。</h1><p>依据 WIX1003 的 Lab 01 与 Lab 02 制作。每一关都从原理讲起，给出接线表、真值表和检查点，再把你送进可以实时运行的面包板。</p><div class="labs-hero-stats"><div><b>' + total + '</b><span>个关卡</span></div><div><b>2</b><span>份 Lab</span></div><div><b>' + done + '</b><span>已完成</span></div></div></div>' +
+      '<div class="labs-hero-grid"><div><span class="eyebrow green">LAB PRACTICE · GUIDED MISSIONS</span><h1>把 Lab 练习<br>变成一场<span>闯关</span>。</h1><p>依据 WIX1003 的 Lab 01 与 Lab 02 制作。每一关先用大白话讲清楚要做什么，再让你自己接线；给你提示、让你自己填表，最后还有空白终验，看看你是不是真的会了。</p><div class="labs-hero-stats"><div><b>' + total + '</b><span>个关卡</span></div><div><b>2</b><span>份 Lab</span></div><div><b>' + done + '</b><span>已完成</span></div></div></div>' +
       '<div class="labs-progress-card"><div class="labs-progress-head"><span>总进度</span><b>' + done + ' / ' + total + '</b></div><div class="labs-progress"><span style="width:' + Math.round(done / total * 100) + '%"></span></div><p>完成实验台里的任务卡后自动记录。进度保存在本浏览器。</p><div class="labs-progress-marks">' + BBL.LABS.tracks.map((t) => '<span><i class="' + t.color + '"></i>' + t.label + ' ' + BBL.LABS.LabProgress.count(t.id) + '/' + BBL.LABS.LabProgress.total(t.id) + '</span>').join('') + '</div></div>' +
       '</div></div></section>' +
-      '<div class="container labs-body"><div class="labs-tracks">' + BBL.LABS.tracks.map((track) => {
+      '<div class="container labs-body"><div class="labs-basics"><div class="labs-basics-head"><span class="eyebrow green">START HERE</span><h2>先记住这 5 句话</h2><p>不需要先学电子学。把这几个词当成日常用语，就能开始。</p></div><div class="labs-basics-grid">' +
+      '<div><b>1 和 0</b><span>1 就是“有电/高”，0 就是“没电/低”。</span></div>' +
+      '<div><b>红色和黑色</b><span>红色 V+ 是正极，黑色 GND 是负极；两者不能直接连在一起。</span></div>' +
+      '<div><b>面包板</b><span>同一列的几个孔在内部是连着的；中间沟把上下两半分开了。</span></div>' +
+      '<div><b>芯片的脚</b><span>缺口朝上，左下角是第 1 脚，逆时针数；14 脚接正极，7 脚接负极。</span></div>' +
+      '<div><b>小灯和电阻</b><span>小灯长脚接正、短脚接负；电阻用来限制电流，不能省。</span></div>' +
+      '</div></div><div class="labs-tracks">' + BBL.LABS.tracks.map((track) => {
         const levels = BBL.LABS.levelsOf(track.id);
         const td = BBL.LABS.LabProgress.count(track.id);
         return '<section class="lab-track ' + track.color + '"><div class="lab-track-head"><div class="lab-track-badge">' + track.label + '</div><div class="lab-track-title"><span>' + esc(track.cn) + '</span><h2>' + esc(track.title) + '</h2><p>' + esc(track.intro) + '</p></div><div class="lab-track-progress"><b>' + td + '/' + levels.length + '</b><span>已完成</span></div></div>' +
@@ -676,6 +682,7 @@
       (level.final
         ? '<div class="lab-start-banner final">' + svgIcon('target') + '<div><b>终验关 · 空白画布</b><span>这一关<strong>没有零件，也没有导线</strong>。请打开右侧元件库，自己摆放芯片、开关、电阻和 LED，再独立完成接线。</span></div></div>'
         : '<div class="lab-start-banner">' + svgIcon('branch') + '<div><b>练习关</b><span>元件已经摆在面包板上，但<strong>所有导线都是断开的</strong>。请按任务卡自己接线；卡住时再展开下方提示。最后的终验关会连零件都不提供。</span></div></div>') +
+      (level.plain ? '<div class="lab-easy"><span>先用人话说</span><p>' + esc(level.plain) + '</p></div>' : '') +
       '<section class="lab-section"><div class="lab-section-head"><span>01</span><h2>原理背景</h2></div><div class="lab-prose">' + level.background.map((p) => '<p>' + esc(p) + '</p>').join('') + '</div></section>' +
       '<section class="lab-section"><div class="lab-section-head"><span>02</span><h2>操作步骤</h2></div><ol class="lab-steps">' + level.steps.map((s, i) => '<li><span class="lab-step-num">' + (i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p>' + esc(s.body) + '</p></div></li>').join('') + '</ol></section>' +
       (level.final
