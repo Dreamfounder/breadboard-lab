@@ -46,7 +46,7 @@
     ic74hc04: { name: '74HC04', pins: icPins(), props: { label: '74HC04', sub: 'HEX INVERTER' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
     ic74hc86: { name: '74HC86', pins: icPins(), props: { label: '74HC86', sub: 'QUAD 2-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
     ic74hc02: { name: '74HC02', pins: icPins(), props: { label: '74HC02', sub: 'QUAD 2-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
-    'arduino-uno': { name: 'Arduino Uno', pins: [{ id: '5v', x: 24, y: 34 }, { id: 'gnd', x: 12, y: 34 }, { id: 'd9', x: 0, y: 34 }, { id: 'a0', x: -12, y: 34 }, { id: 'd2', x: -24, y: 34 }], props: {}, bounds: { x: -56, y: -33, w: 112, h: 71 } },
+    'arduino-uno': { name: 'Arduino Uno', pins: [{ id: '5v', x: 30, y: 34 }, { id: 'gnd', x: 18, y: 34 }, { id: 'd13', x: 6, y: 34 }, { id: 'd9', x: -6, y: 34 }, { id: 'd2', x: -18, y: 34 }, { id: 'a0', x: -30, y: 34 }], props: {}, bounds: { x: -56, y: -33, w: 112, h: 71 } },
     microbit: { name: 'micro:bit', pins: [{ id: '3v', x: -12, y: 32 }, { id: 'gnd', x: 0, y: 32 }, { id: 'p0', x: 12, y: 32 }], props: {}, bounds: { x: -35, y: -31, w: 70, h: 66 } },
     'dc-motor': { name: '直流电机', pins: [{ id: '1', x: -13, y: 0 }, { id: '2', x: 13, y: 0 }], props: {}, bounds: { x: -21, y: -33, w: 42, h: 37 } },
     servo: { name: '微型伺服', pins: [{ id: 'gnd', x: -12, y: 17 }, { id: 'vcc', x: 0, y: 17 }, { id: 'sig', x: 12, y: 17 }], props: {}, bounds: { x: -21, y: -33, w: 42, h: 53 } },
@@ -58,8 +58,7 @@
     'battery-9v': { v: function () { return 9; }, r: 0.5, plus: '+', minus: '-' },
     'coin-cell': { v: function () { return 3; }, r: 12, plus: '+', minus: '-' },
     'aa-battery': { v: function () { return 1.5; }, r: 0.3, plus: '+', minus: '-' },
-    'arduino-uno': { v: function () { return 5; }, r: 0.3, plus: '5v', minus: 'gnd' },
-    microbit: { v: function () { return 3; }, r: 0.3, plus: '3v', minus: 'gnd' }
+    'arduino-uno': { v: function () { return 5; }, r: 0.3, plus: '5v', minus: 'gnd' },    microbit: { v: function () { return 3; }, r: 0.3, plus: '3v', minus: 'gnd' }
   };
 
   const LED_VF = { red: 1.9, green: 2.1, yellow: 2.0, blue: 3.0 };
@@ -422,6 +421,31 @@
     return s;
   };
 
+  Templates['arduino-blink'] = function () {
+    const s = baseScene('Arduino 编程 · 闪烁与调光');
+    s.template = 'arduino-blink';
+    const uno = createComponent('arduino-uno', 150, 155); uno.id = 'uno1';
+    const r13 = createComponent('resistor', 503, 388, { resistance: 220 }); r13.id = 'r13';
+    const led13 = createComponent('led', 594, 401, { color: 'red' }); led13.id = 'led13';
+    const r9 = createComponent('resistor', 685, 388, { resistance: 220 }); r9.id = 'r9';
+    const led9 = createComponent('led', 776, 401, { color: 'green' }); led9.id = 'led9';
+    const btn = createComponent('button', 256, 401, { pressed: false }); btn.id = 'btn1';
+    const pot = createComponent('potentiometer', 334, 388, { position: 50 }); pot.id = 'pot1';
+    s.components.push(uno, r13, led13, r9, led9, btn, pot);
+    wire(s, 'uno1', 'd13', 'r13', '1', 'green');
+    wire(s, 'r13', '2', 'led13', 'a', 'green');
+    wire(s, 'led13', 'k', 'uno1', 'gnd', 'black');
+    wire(s, 'uno1', 'd9', 'r9', '1', 'green');
+    wire(s, 'r9', '2', 'led9', 'a', 'green');
+    wire(s, 'led9', 'k', 'uno1', 'gnd', 'black');
+    wire(s, 'uno1', '5v', 'pot1', '1', 'red');
+    wire(s, 'pot1', '3', 'uno1', 'gnd', 'black');
+    wire(s, 'pot1', '2', 'uno1', 'a0', 'green');
+    wire(s, 'uno1', 'd2', 'btn1', '1', 'green');
+    wire(s, 'btn1', '2', 'uno1', 'gnd', 'black');
+    return s;
+  };
+
   Templates['half-adder'] = function () {
     const s = baseScene('实验十 · 半加器');
     s.template = 'half-adder';
@@ -637,6 +661,34 @@
       warnings.push({ code: 'no-source', level: 'warn', message: '电路里还没有电源，接一个电源后才会通电。' });
     }
 
+    // ---------- code-driven Arduino I/O ----------
+    const ioConfig = (options && options.io) || {};
+    const ioDrivers = [];
+    const ioPullups = [];
+    comps.forEach(function (comp) {
+      if (comp.type !== 'arduino-uno') return;
+      const cfg = ioConfig[comp.id];
+      if (!cfg) return;
+      const pn = pinNet[comp.id];
+      const gndNet = pn['gnd'];
+      const vccNet = pn['5v'];
+      Object.keys(cfg).forEach(function (pin) {
+        const st = cfg[pin];
+        const net = pn[pin];
+        if (!st || net == null || gndNet == null) return;
+        const def = DEFS['arduino-uno'];
+        if (!def.pins.some(function (p) { return p.id === pin; })) return;
+        if (st.mode === 'OUTPUT' && st.value != null) {
+          const volts = st.pwm
+            ? Math.max(0, Math.min(255, Number(st.value))) / 255 * 5
+            : (Number(st.value) ? 5 : 0);
+          ioDrivers.push({ a: net, b: gndNet, V: volts, R: 120, compId: comp.id, pin: pin });
+        } else if (st.mode === 'INPUT_PULLUP' && vccNet != null) {
+          ioPullups.push({ a: net, b: vccNet, R: 30000, compId: comp.id, pin: pin });
+        }
+      });
+    });
+
     // ---------- passive elements ----------
     const resistors = []; // {a,b,R,compId,kind}
     const capBranches = [];
@@ -730,6 +782,9 @@
       }
       // sources
       sources.forEach(function (s) { vSource(s.pos, s.neg, s.V, s.R); });
+      // code-driven Arduino outputs & pull-ups
+      ioDrivers.forEach(function (d) { vSource(d.a, d.b, d.V, d.R); });
+      ioPullups.forEach(function (r) { addG(r.a, r.b, 1 / r.R); });
       // passives
       resistors.forEach(function (r) { addG(r.a, r.b, 1 / Math.max(r.R, 0.001)); });
       // LEDs
@@ -797,7 +852,7 @@
       leds.forEach(function (l) {
         const vd = volts[l.a] - volts[l.k];
         l.voltage = vd;
-        const should = vd > l.vf + 0.05;
+        const should = l.on ? vd > l.vf - 0.1 : vd > l.vf + 0.05;
         if (should !== l.on) { l.on = should; changed = true; }
       });
       // ICs
@@ -861,6 +916,9 @@
     const componentResult = {};
     comps.forEach(function (comp) {
       componentResult[comp.id] = { type: comp.type, powered: false, current: 0, voltage: 0 };
+      if (comp.type === 'arduino-uno' && ioConfig[comp.id]) {
+        componentResult[comp.id].io = JSON.parse(JSON.stringify(ioConfig[comp.id]));
+      }
     });
     // sources current
     sources.forEach(function (s) {
@@ -1119,6 +1177,17 @@
         { key: 'carry-lit', text: '让 A、B 都为 1，验证 1 + 1 = 10' }
       ],
       success: 'Sum = A ⊕ B，Carry = A · B。你刚刚搭出了一台半加器。'
+    },
+    'arduino-blink': {
+      kicker: '项目 · 代码与电路',
+      title: '让代码控制电路',
+      summary: '打开代码编辑器，用 Arduino 控制真实的 LED、按钮和旋钮。',
+      steps: [
+        { key: 'arduino-part', text: '找到 Arduino Uno 与 D13 上的 LED' },
+        { key: 'code-open', text: '打开工具栏的「代码」编辑器' },
+        { key: 'code-running', text: '运行示例代码，观察 LED 与串口' }
+      ],
+      success: '代码运行了！试着切换到「旋钮调光」，并打开串口监视器。'
     }
   };
 

@@ -415,6 +415,7 @@
 
   function boardArt(comp, pins, which) {
     if (comp.type === 'arduino-uno') {
+      const d13on = comp.sim && comp.sim.io && comp.sim.io.d13 && Number(comp.sim.io.d13.value) > 0;
       return '<rect x="-44" y="-30" width="88" height="60" rx="4" fill="url(#unoBody)" stroke="#0c4a5e" stroke-width="1"/>' +
         '<rect x="-53" y="-10" width="12" height="20" rx="2" fill="#cbd5e1" stroke="#94a3b8"/>' +
         '<rect x="-26" y="-4" width="24" height="16" rx="1.5" fill="#111827"/>' +
@@ -423,6 +424,8 @@
         '<rect x="-40" y="24" width="76" height="6" rx="1" fill="#0b1220" opacity=".55"/>' +
         '<rect x="-40" y="-28" width="76" height="5" rx="1" fill="#0b1220" opacity=".45"/>' +
         '<circle cx="36" cy="-18" r="2.4" fill="#34d399"/><circle cx="29" cy="-18" r="2.4" fill="#fbbf24"/>' +
+        '<circle cx="36" cy="-11" r="2.6" fill="' + (d13on ? '#fde047' : '#64748b') + '"' + (d13on ? ' filter="drop-shadow(0 0 3px #fde047)"' : '') + '/>' +
+        '<text x="32" y="-4" font-family="monospace" font-size="3" fill="#cbd5e1">L</text>' +
         '<text x="-37" y="-8" font-family="monospace" font-size="3.4" fill="#a5f3fc">DIGITAL</text>' +
         '<path d="M-37 19H31" stroke="#a5f3fc" stroke-opacity=".5" stroke-width=".6"/>';
     }
@@ -545,6 +548,17 @@
         '<path d="M130 128h50v-24h44M300 104h60c22 0 22 30 44 30h34" fill="none" stroke="#2e9e77" stroke-width="3.2" stroke-linecap="round"/>' +
         '<g transform="translate(250 90)"><circle r="30" fill="#ef4444" opacity=".08"/><rect x="-34" y="4" width="68" height="18" rx="4" fill="#2b3038"/><circle cy="0" r="14" fill="#ef4444" stroke="#b91c1c"/><ellipse cx="-4" cy="-5" rx="4" ry="2.6" fill="#fff" opacity=".3"/><path d="M-14 22v22M14 22v22" stroke="#9aa4b2" stroke-width="2.2"/></g>' +
         '<g transform="translate(390 96)"><circle r="18" fill="#ff5d5d" opacity=".17"/><circle r="10" fill="#ef4444" stroke="#b91c1c"/><path d="M-5 10v14M5 10v12" stroke="#9aa4b2" stroke-width="2"/></g>');
+    }
+    if (kind === 'code') {
+      return wrap('<circle cx="470" cy="60" r="120" fill="#2563eb" opacity=".06"/><circle cx="120" cy="160" r="90" fill="#10b981" opacity=".05"/>' +
+        '<g transform="translate(92 26)"><rect width="380" height="128" rx="10" fill="#101828" stroke="#26344c"/><path d="M16 9h3M25 9h3M34 9h3" stroke="#64748b" stroke-width="3.5" stroke-linecap="round"/>' +
+        '<text x="20" y="43" font-family="monospace" font-size="10" fill="#7dd3fc">void setup() {</text>' +
+        '<text x="32" y="61" font-family="monospace" font-size="10" fill="#f1f5f9">pinMode<tspan fill="#fbbf24">(13, OUTPUT);</tspan></text>' +
+        '<text x="20" y="79" font-family="monospace" font-size="10" fill="#7dd3fc">}</text>' +
+        '<text x="20" y="100" font-family="monospace" font-size="10" fill="#6ee7b7">digitalWrite(13, HIGH);</text>' +
+        '<text x="20" y="117" font-family="monospace" font-size="10" fill="#c4b5fd">delay(500);</text></g>' +
+        '<g transform="translate(520 82)"><rect x="-30" y="-34" width="66" height="70" rx="6" fill="#0e7490" stroke="#155e75"/><rect x="-21" y="-8" width="30" height="24" rx="2" fill="#111827"/><circle cx="16" cy="-20" r="12" fill="#ff5d5d" opacity=".18"/><circle cx="16" cy="-20" r="6.5" fill="#ef4444" stroke="#b91c1c"/><path d="M12-23c1-1.8 2.7-2.5 4-2.4" stroke="#fff" stroke-opacity=".6" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M-24 42v14M-8 42v14M8 42v14M24 42v14" stroke="#94a3b8" stroke-width="2"/></g>' +
+        '<rect x="94" y="153" width="380" height="20" rx="5" fill="#101828"/><text x="284" y="167" text-anchor="middle" font-family="monospace" font-size="8" fill="#94a3b8">ARDUINO UNO · LIVE SIMULATION</text>');
     }
     if (kind === 'cap') {
       return wrap('<circle cx="470" cy="80" r="100" fill="#2563eb" opacity=".045"/>' +

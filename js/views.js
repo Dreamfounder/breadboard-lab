@@ -85,7 +85,7 @@
     const rows = [
       ['选择工具', 'V'], ['连线工具', 'W'], ['删除工具', 'X'],
       ['删除选中', 'Delete / Backspace'], ['撤销', 'Ctrl + Z'], ['重做', 'Ctrl + Shift + Z'],
-      ['复制元件', 'Ctrl + D'], ['旋转 90°', 'R'], ['缩放', '滚轮 / + / −'], ['适应画布', '0'], ['取消连线 / 关闭面板', 'Esc']
+      ['复制元件', 'Ctrl + D'], ['旋转 90°', 'R'], ['开始 / 暂停模拟', 'S'], ['缩放', '滚轮 / + / −'], ['适应画布', '0'], ['取消连线 / 关闭面板', 'Esc']
     ];
     const body = '<div class="help-grid">' +
       '<div><h3 style="font-size:14px;margin-bottom:10px">画布快捷键</h3><div style="display:flex;flex-direction:column;gap:7px">' +
@@ -175,7 +175,7 @@
       '<svg viewBox="0 0 40 40"><rect x="3" y="3" width="34" height="34" rx="10" fill="currentColor"/><path d="M12 15h16M12 20h16M12 25h16" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="15" r="1.7" fill="#fff"/><circle cx="24" cy="20" r="1.7" fill="#fff"/><circle cx="19" cy="25" r="1.7" fill="#fff"/></svg></span>' +
       '<div class="brand-copy"><strong>电路工坊</strong><small style="display:block">Breadboard Lab</small></div></div>' +
       '<p style="margin-left:4px">把电路，搭在浏览器里。</p>' +
-      '<div class="footer-links"><a href="#/learn">教程</a><a href="#/parts">元件库</a><a href="#/sandbox">自由实验</a><a href="#" data-open-help>帮助</a></div>' +
+      '<div class="footer-links"><a href="#/projects">项目</a><a href="#/learn">教程</a><a href="#/parts">元件库</a><a href="#/sandbox">自由实验</a><a href="#" data-open-help>帮助</a></div>' +
       '</div></footer>';
   }
 
@@ -251,6 +251,7 @@
       '<div class="container learn-body">' +
       '<div class="learn-toolbar"><div class="progress-mini"><span>学习进度</span><div class="bar"><i style="width:' + pct + '%"></i></div><b>' + done + ' / ' + BBL.LESSONS.length + '</b><span>' + pct + '%</span></div><a class="btn sm" href="#/parts">' + svgIcon('cube') + ' 元件百科</a></div>' +
       chaptersHtml +
+      '<section class="course-section"><div class="learn-code-teaser"><div class="learn-code-copy"><span class="pill green">NEW · CODE LAB</span><h2>电路不只可以连线，<br>还可以编程。</h2><p>打开 Arduino 代码实验室，用积木理解结构，用文本写真正的代码。D13 的 LED、D2 的按钮、A0 的旋钮和串口监视器都已经接好，运行即可看到电路响应。</p><a class="btn accent" href="#/editor?template=arduino-blink&task=arduino-blink&code=1">' + svgIcon('code') + ' 打开 Arduino 代码实验</a></div><div class="learn-code-art">' + Art.cover('code') + '</div></div></section>' +
       '<section class="course-section"><div class="section-head"><div><div class="eyebrow green">WHY IT WORKS</div><h2>三个核心直觉</h2><p>先把这三件事想明白，后面的电路都只是组合。</p></div></div>' +
       '<div class="concept-grid">' +
       '<div class="concept-card"><div class="concept-icon">' + svgIcon('bolt') + '</div><h3>电压是“推动力”</h3><p>电源提供电势差，推动电荷移动。电压不会“流过”电路，它加在元件两端。</p></div>' +
@@ -449,6 +450,72 @@
       (related.length ? '<div class="aside-card"><h4>' + svgIcon('book') + ' 出现在这些课</h4><div class="related-lessons">' + related.slice(0, 6).map((l) => '<a href="#/learn/' + l.id + '"><span class="n">' + fmt(l.number) + '</span><span>' + esc(l.title) + '</span></a>').join('') + '</div></div>' : '') +
       '<div class="aside-card part-cta"><h3>边看边搭</h3><p>打开自由实验，把 ' + esc(p.name) + ' 拖进面包板，边接线边观察。</p><a class="btn primary block" href="#/sandbox">' + svgIcon('flask') + ' 打开自由实验</a></div>' +
       '</aside></div></div>' + footerHTML();
+    attachFooter(mount);
+  };
+
+  /* ------------------------------------------------------------------
+     Projects dashboard
+     ------------------------------------------------------------------ */
+  const PROJECTS = [
+    { id: 'led', title: '点亮第一颗 LED', desc: '从电源、限流电阻和一颗 LED 开始，理解闭合回路。', template: 'led-basic', cover: 'led', badge: '基础', time: '8 分钟', parts: ['resistor', 'led', 'power-supply'] },
+    { id: 'button', title: '按钮控制灯', desc: '按钮串进回路，按下才亮。认识最基本的数字输入。', template: 'button-led', cover: 'button', badge: '输入', time: '10 分钟', parts: ['button', 'resistor', 'led'] },
+    { id: 'and', title: '74HC08 与门', desc: '两个开关都拨到高电平，输出 LED 才亮。', template: 'and-gate', cover: 'gates', badge: '逻辑', time: '14 分钟', parts: ['ic74hc08', 'slide-switch', 'led'] },
+    { id: 'arduino', title: 'Arduino 编程', desc: '写一段 Arduino 代码，让 D13 闪烁、旋钮调光。', template: 'arduino-blink', cover: 'code', badge: '代码', time: '15 分钟', parts: ['arduino-uno', 'led', 'potentiometer'], code: true },
+    { id: 'half', title: '半加器', desc: 'XOR 求和，AND 进位，搭出 1 + 1 = 10。', template: 'half-adder', cover: 'xor', badge: '进阶', time: '16 分钟', parts: ['ic74hc86', 'ic74hc08', 'led'] },
+    { id: 'alarm', title: '双条件报警器', desc: '两个条件同时满足时蜂鸣器响起，做一个组合逻辑项目。', template: 'alarm', cover: 'project', badge: '项目', time: '18 分钟', parts: ['ic74hc08', 'buzzer', 'slide-switch'] },
+    { id: 'motor', title: '电机控制', desc: '用开关控制直流电机，观察电能变成机械能。', template: 'motor', cover: 'motor', badge: '输出', time: '12 分钟', parts: ['dc-motor', 'slide-switch', 'power-supply'] },
+    { id: 'pot', title: '旋钮调光', desc: '电位器分压，连续改变 LED 的亮度。', template: 'pot-led', cover: 'pot', badge: '模拟', time: '11 分钟', parts: ['potentiometer', 'led', 'resistor'] }
+  ];
+
+  function readDesign(key) {
+    try {
+      const data = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!data || !Array.isArray(data.components)) return null;
+      return data;
+    } catch (e) { return null; }
+  }
+
+  BBL.views.projects = function (mount) {
+    const editorDesign = readDesign('bbl.editor.v1');
+    const sandboxDesign = readDesign('bbl.sandbox.v1');
+    const recentHtml = '<div class="recent-panel">' +
+      '<div class="recent-head"><span>' + svgIcon('clock') + ' 最近编辑</span><span class="pill">浏览器本地</span></div>' +
+      (editorDesign
+        ? '<a class="recent-project" href="#/editor"><div class="recent-art">' + Art.icon('breadboard') + '</div><div class="recent-copy"><strong>' + esc(editorDesign.name || '未命名设计') + '</strong><span>' + (editorDesign.components || []).length + ' 个元件 · ' + (editorDesign.wires || []).length + ' 条导线</span></div><span class="recent-action">继续 ' + svgIcon('arrow-right') + '</span></a>'
+        : '<div class="recent-empty"><span>还没有编辑中的项目。</span><a href="#/sandbox?template=blank">新建一个 ' + svgIcon('arrow-right') + '</a></div>') +
+      '<div class="recent-divider"></div>' +
+      '<a class="recent-project mini" href="#/sandbox"><div class="recent-art green">' + svgIcon('flask') + '</div><div class="recent-copy"><strong>自由实验空间</strong><span>' + (sandboxDesign && Array.isArray(sandboxDesign.components) ? sandboxDesign.components.length + ' 个元件' : '空白画布') + ' · 独立保存</span></div><span class="recent-action">打开 ' + svgIcon('arrow-right') + '</span></a>' +
+      '<div class="recent-note">' + svgIcon('info') + ' 所有设计只保存在当前浏览器，不会上传。</div>' +
+      '</div>';
+
+    mount.innerHTML = '<div class="page projects-page">' +
+      '<section class="projects-hero"><div class="container">' +
+      '<div class="projects-topline"><div class="breadcrumb"><span>工作台</span><span class="sep">/</span><span>项目空间</span></div><span class="projects-status"><i></i> 本地工作区就绪</span></div>' +
+      '<div class="projects-hero-grid"><div class="projects-intro">' +
+      '<span class="eyebrow green">YOUR BREADBOARD WORKBENCH</span>' +
+      '<h1>今天想<br><em>搭</em>点什么？</h1>' +
+      '<p>从一个可以马上运行的示例开始，或者回到你上次的电路。拖动元件、接上导线、运行仿真，最后让代码接管它。</p>' +
+      '<div class="projects-actions"><a class="btn primary lg" href="#/sandbox?template=blank">' + svgIcon('plus') + ' 新建设计</a><a class="btn lg" href="#/learn">' + svgIcon('book') + ' 从课程开始</a></div>' +
+      '<div class="projects-trust"><span>' + svgIcon('check-circle') + ' 无需登录</span><span>' + svgIcon('check-circle') + ' 自动保存</span><span>' + svgIcon('check-circle') + ' 完全免费</span></div>' +
+      '</div>' + recentHtml + '</div></div></section>' +
+      '<div class="container projects-body">' +
+      '<section class="project-section"><div class="section-head"><div><div class="eyebrow">QUICK START</div><h2>新建一个设计</h2><p>空白画布、经典入门，或者直接进入代码实验。</p></div><a class="link" href="#/parts">查看全部元件 ' + svgIcon('arrow-right') + '</a></div>' +
+      '<div class="quick-grid">' +
+      '<a class="quick-card" href="#/sandbox?template=blank"><span class="quick-watermark">' + svgIcon('circuit') + '</span><span class="quick-icon blue">' + svgIcon('plus') + '</span><strong>空白画布</strong><span>一块 830 孔面包板，从零开始。</span><em>新建设计 ' + svgIcon('arrow-right') + '</em></a>' +
+      '<a class="quick-card" href="#/editor?template=led-basic&task=led-basic"><span class="quick-watermark">' + svgIcon('lightbulb') + '</span><span class="quick-icon amber">' + svgIcon('lightbulb') + '</span><strong>LED 入门</strong><span>电源、电阻、LED，一条完整的回路。</span><em>打开示例 ' + svgIcon('arrow-right') + '</em></a>' +
+      '<a class="quick-card code" href="#/editor?template=arduino-blink&task=arduino-blink&code=1"><span class="quick-watermark">' + svgIcon('code') + '</span><span class="quick-icon dark">' + svgIcon('code') + '</span><strong>代码实验</strong><span>用 Arduino 控制 D13，边写代码边看电路。</span><em>进入代码编辑器 ' + svgIcon('arrow-right') + '</em></a>' +
+      '</div></section>' +
+      '<section class="project-section"><div class="section-head"><div><div class="eyebrow amber">FEATURED PROJECTS</div><h2>精选项目</h2><p>每一个都能直接打开、修改并运行。</p></div><span class="pill blue">' + PROJECTS.length + ' 个示例</span></div>' +
+      '<div class="project-grid">' + PROJECTS.map((p) => {
+        const link = '#/editor?template=' + encodeURIComponent(p.template) + '&task=' + encodeURIComponent(p.template) + (p.code ? '&code=1' : '');
+        return '<a class="project-card" href="' + link + '">' +
+          '<div class="project-cover' + (p.code ? ' code' : '') + '">' + Art.cover(p.cover) + '<span class="project-badge ' + (p.code ? 'dark' : '') + '">' + esc(p.badge) + '</span></div>' +
+          '<div class="project-card-body"><div class="project-title"><h3>' + esc(p.title) + '</h3><span class="project-time">' + svgIcon('clock') + p.time + '</span></div>' +
+          '<p>' + esc(p.desc) + '</p>' +
+          '<div class="project-foot"><span class="project-parts">' + p.parts.slice(0, 3).map((pid) => { const part = BBL.partById(pid); return part ? '<i title="' + esc(part.name) + '">' + Art.icon(pid) + '</i>' : ''; }).join('') + '</span><span class="project-open">打开 ' + svgIcon('arrow-right') + '</span></div></div></a>';
+      }).join('') + '</div></section>' +
+      '<div class="projects-code-banner"><div class="projects-code-icon">' + svgIcon('terminal') + '</div><div><div class="eyebrow green">CODE × CIRCUIT</div><h2>让代码真正驱动电路。</h2><p>内置 Arduino 教学子集：setup/loop、pinMode、digitalWrite、analogWrite、if/else 和串口监视器。写一行，电路立刻响应。</p></div><a class="btn accent lg" href="#/editor?template=arduino-blink&task=arduino-blink&code=1">' + svgIcon('code') + ' 打开代码实验</a></div>' +
+      '</div></div>' + footerHTML();
     attachFooter(mount);
   };
 

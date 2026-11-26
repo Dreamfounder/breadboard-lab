@@ -55,6 +55,7 @@
       setActiveNav(first);
       const template = params.get('template') || null;
       const task = params.get('task') || null;
+      const openCode = params.get('code') === '1';
       const mode = first === 'sandbox' ? 'sandbox' : 'editor';
       const host = document.createElement('div');
       host.style.minHeight = '0';
@@ -63,10 +64,22 @@
         mode: mode,
         template: template,
         taskId: task || template,
-        loadSaved: !template
+        openCode: openCode
       });
       window.__bbEditor = currentEditor;
+      if (openCode) {
+        const editorRef = currentEditor;
+        setTimeout(function () { if (currentEditor === editorRef) editorRef.openCodePanel(); }, 180);
+      }
       setTitle(currentEditor.scene.name || (mode === 'sandbox' ? '自由实验' : '电路工作台'));
+      window.scrollTo(0, 0);
+      return;
+    }
+
+    if (first === 'projects') {
+      setActiveNav('projects');
+      BBL.views.projects(view);
+      setTitle('项目空间');
       window.scrollTo(0, 0);
       return;
     }

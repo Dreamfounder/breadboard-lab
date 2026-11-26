@@ -39,7 +39,7 @@
     'battery-9v': { '+': '正极 +', '-': '负极 −' },
     'coin-cell': { '+': '正极 +', '-': '负极 −' },
     'aa-battery': { '+': '正极 +', '-': '负极 −' },
-    'arduino-uno': { '5v': '5V 输出', gnd: 'GND', d9: 'D9', a0: 'A0', d2: 'D2' },
+    'arduino-uno': { '5v': '5V 输出', gnd: 'GND', d13: 'D13 / 板载 LED', d9: 'D9 / PWM', d2: 'D2 / 数字输入', a0: 'A0 / 模拟输入' },
     microbit: { '3v': '3V 输出', gnd: 'GND', p0: 'P0' },
     'dc-motor': { 1: 'M+', 2: 'M−' },
     servo: { gnd: 'GND（棕）', vcc: 'V+（红）', sig: 'SIG（橙）' },
@@ -115,6 +115,17 @@
     this.cursor = null;
     this.drag = null;
     this.libDrag = null;
+    this.codeOpen = false;
+    this.codeRunning = false;
+    this.codeRunner = null;
+    this.codeIO = {};
+    this.codeQueue = null;
+    this._codeSimPending = false;
+    this.serialLines = [];
+    this.codeExampleId = 'blink';
+    this.codeText = '';
+    this.codeArduinoId = null;
+    this.codeTab = 'blocks';
     this.view = { x: 0, y: 0, zoom: 1 };
     this.userAdjustedView = false;
     this.history = [];
@@ -128,6 +139,10 @@
     this.abort = new AbortController();
     this.scene = this.loadInitialScene();
     this.scene._holes = E.boardHoles(this.scene.board);
+    if (this.scene.code) {
+      if (this.scene.code.exampleId) this.codeExampleId = this.scene.code.exampleId;
+      if (this.scene.code.text) this.codeText = this.scene.code.text;
+    }
     this.bindings = {};
     this.renderShell();
     this.attachEvents();
@@ -248,6 +263,7 @@
               <button data-action="clear" class="danger">${svgIcon('trash')} 清空画布</button>
               <div class="sep"></div>
               <button data-action="help">${svgIcon('keyboard')} 快捷键与帮助</button>
+              <a href="#/projects">${svgIcon('grid')} 项目空间</a>
               <a href="#/learn">${svgIcon('book')} 返回教程</a>
             </div>
           </div>
@@ -271,6 +287,7 @@
             <div class="group">
               <button class="tool-btn" data-action="rotate" title="旋转 90° (R)">${svgIcon('rotate')}<span class="tool-label">旋转</span></button>
               <button class="tool-btn" data-action="duplicate" title="复制 (Ctrl+D)">${svgIcon('copy')}</button>
+              <button class="tool-btn code-entry" id="code-entry" data-action="toggle-code" title="打开代码编辑器">${svgIcon('code')}<span class="tool-label">代码</span><i class="code-live-dot"></i></button>
             </div>
             <span class="ribbon-hint" id="ribbon-hint">选择元件拖动位置 · 拖动引脚到另一个引脚即可连线</span>
             <div class="ribbon-right">
@@ -315,6 +332,42 @@
                 <button data-action="zoom-fit" aria-label="适应画布" title="适应画布">${svgIcon('fit')}</button>
               </div>
               <div class="canvas-tip"><b>拖动</b> 元件 · <b>拖动引脚</b> 连线 · <b>滚轮</b> 缩放 · <b>空白拖动</b> 平移</div>
+            </div>
+
+            <div class="code-drawer" id="code-drawer" hidden>
+              <div class="code-head">
+                <div class="code-title">
+                  <span class="code-title-icon">${svgIcon('code')}</span>
+                  <div><strong>代码编辑器</strong><span id="code-board-label">等待 Arduino Uno</span></div>
+                </div>
+                <div class="code-tabs" role="tablist">
+                  <button class="code-tab active" data-code-tab="blocks">${svgIcon('blocks')} 积木</button>
+                  <button class="code-tab" data-code-tab="text">${svgIcon('code')} 文本</button>
+                </div>
+                <div class="code-actions">
+                  <select class="select-ui code-example-select" id="code-example" aria-label="选择示例程序"></select>
+                  <button class="btn sm accent" data-action="code-run">${svgIcon('play')} 运行</button>
+                  <button class="btn sm" data-action="code-stop" disabled>${svgIcon('stop')} 停止</button>
+                  <button class="icon-btn" data-action="close-code" aria-label="关闭代码面板">${svgIcon('close')}</button>
+                </div>
+              </div>
+              <div class="code-body">
+                <div class="code-main">
+                  <div class="code-blocks" id="code-blocks"></div>
+                  <div class="code-text-pane" id="code-text-pane" hidden>
+                    <div class="code-editor-tools">
+                      <span>Arduino C++ · 教学子集</span>
+                      <button data-action="reset-code">恢复示例代码</button>
+                    </div>
+                    <textarea id="code-text" spellcheck="false" aria-label="Arduino 代码"></textarea>
+                    <div class="code-status" id="code-status">修改代码后点击「运行」。</div>
+                  </div>
+                </div>
+                <aside class="serial-panel">
+                  <div class="serial-head"><span><i></i> 串口监视器 <b>9600</b></span><button data-action="clear-serial">清空</button></div>
+                  <div class="serial-output" id="serial-output"><span class="serial-empty">运行代码后，Serial.println 的输出会出现在这里。</span></div>
+                </aside>
+              </div>
             </div>
           </div>
 
@@ -367,6 +420,15 @@
     this.$hud = this.mount.querySelector('#sim-hud');
     this.$taskSlot = this.mount.querySelector('#task-slot');
     this.$emptyHint = this.mount.querySelector('#empty-hint');
+    this.$codeDrawer = this.mount.querySelector('#code-drawer');
+    this.$codeEntry = this.mount.querySelector('#code-entry');
+    this.$codeExample = this.mount.querySelector('#code-example');
+    this.$codeTextPane = this.mount.querySelector('#code-text-pane');
+    this.$codeText = this.mount.querySelector('#code-text');
+    this.$codeBlocks = this.mount.querySelector('#code-blocks');
+    this.$codeStatus = this.mount.querySelector('#code-status');
+    this.$serialOutput = this.mount.querySelector('#serial-output');
+    this.$codeBoardLabel = this.mount.querySelector('#code-board-label');
     this.$name = this.mount.querySelector('#project-name');
     this.$savedBadge = this.mount.querySelector('#saved-badge');
     this.$zoomLevel = this.mount.querySelector('#zoom-level');
@@ -417,6 +479,8 @@
 
   Editor.prototype.destroy = function () {
     this._mounted = false;
+    if (this.codeRunner) { this.codeRunner.stop(); this.codeRunner = null; }
+    this.codeRunning = false;
     this.autosaveNow();
     this.abort.abort();
     if (this._ro) this._ro.disconnect();
@@ -652,6 +716,7 @@
         else if (comp.type === 'dc-motor') comp.sim = { motor: sim.motor || 0 };
         else if (comp.type === 'servo') comp.sim = { angle: sim.angle || 90 };
         else if (comp.type === 'buzzer') comp.sim = { buzzer: !!sim.buzzer };
+        else if (comp.type === 'arduino-uno') comp.sim = { io: sim.io, powered: sim.powered };
       }
       const b = def.bounds;
       const sel = comp.id === selectedId ? ' selected' : '';
@@ -882,6 +947,7 @@
     this.renderScene();
     this.renderInspector();
     this.commit('添加' + partOf(type).name);
+    this.refreshCodeAvailability();
     if (this.simRunning) this.runSimulation();
     if (isMobile()) this.closePanel();
     if (!opts || !opts.silent) {
@@ -1075,6 +1141,10 @@
   Editor.prototype.deleteComponent = function (id) {
     const comp = this.scene.components.find((c) => c.id === id);
     if (!comp) return;
+    if (id === this.codeArduinoId && this.codeRunning) {
+      this.stopCode({ silent: true });
+      this.setCodeStatus('Arduino 已被删除，代码运行已停止。', 'warn');
+    }
     this.scene.components = this.scene.components.filter((c) => c.id !== id);
     this.scene.wires = this.scene.wires.filter((w) => !(w.a.kind === 'pin' && w.a.comp === id) && !(w.b.kind === 'pin' && w.b.comp === id));
     this.selection = null;
@@ -1083,6 +1153,7 @@
     this.renderScene();
     this.renderInspector();
     this.commit('删除' + partOf(comp.type).name);
+    this.refreshCodeAvailability();
     if (this.simRunning) this.runSimulation();
     this.toast('已删除 ' + partOf(comp.type).name);
   };
@@ -1507,6 +1578,8 @@
       if (this.tab === 'library' && this.selection) { /* keep selection */ }
       return;
     }
+    const codeTab = e.target.closest('[data-code-tab]');
+    if (codeTab) { this.setCodeTab(codeTab.dataset.codeTab); return; }
     const chip = e.target.closest('[data-cat]');
     if (chip) { this._cat = chip.dataset.cat; this.renderLibrary(); return; }
     const tool = e.target.closest('[data-tool]');
@@ -1514,6 +1587,12 @@
     const actionEl = e.target.closest('[data-action]');
     if (actionEl) {
       const action = actionEl.dataset.action;
+      if (action === 'toggle-code') return this.toggleCodePanel();
+      if (action === 'close-code') return this.closeCodePanel();
+      if (action === 'code-run') return this.startCode();
+      if (action === 'code-stop') return this.stopCode();
+      if (action === 'clear-serial') return this.clearSerial();
+      if (action === 'reset-code') return this.resetExampleCode();
       if (action === 'undo') return this.undo();
       if (action === 'redo') return this.redo();
       if (action === 'save') return this.manualSave();
@@ -1558,6 +1637,14 @@
       this.scheduleAutosave();
       return;
     }
+    if (t === this.$codeText) {
+      this.codeText = t.value;
+      this.scene.code = { exampleId: this.codeExampleId, text: t.value };
+      if (this.codeRunning) this.stopCode({ silent: true });
+      this.setCodeStatus('代码已修改 · 点击「运行」重新编译并执行', 'ok');
+      this.scheduleAutosave();
+      return;
+    }
     if (t === this.$search) {
       this.renderPartGrid();
       return;
@@ -1577,6 +1664,10 @@
 
   Editor.prototype.onChange = function (e) {
     const t = e.target;
+    if (t === this.$codeExample) {
+      this.loadCodeExample(t.value);
+      return;
+    }
     if (t.matches('[data-range]')) {
       this.commit('调整参数');
       this.renderInspector();
@@ -1617,6 +1708,7 @@
       return;
     }
     if (e.key === 'Escape') {
+      if (this.codeOpen) { this.closeCodePanel(); return; }
       if (this.pending) this.cancelPending();
       else if (this.$panel.classList.contains('open') && isMobile()) this.closePanel();
       else this.clearSelection();
@@ -1626,6 +1718,7 @@
     if (e.key.toLowerCase() === 'v') { this.setTool('select'); return; }
     if (e.key.toLowerCase() === 'w') { this.setTool('wire'); return; }
     if (e.key.toLowerCase() === 'x') { this.setTool('delete'); return; }
+    if (e.key.toLowerCase() === 's') { e.preventDefault(); this.toggleSimulation(); return; }
     if (e.key.toLowerCase() === 'r') { this.rotateSelected(); return; }
     if (e.key === '+' || e.key === '=') { e.preventDefault(); const r = this.$stage.getBoundingClientRect(); this.zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2); return; }
     if (e.key === '-' || e.key === '_') { e.preventDefault(); const r = this.$stage.getBoundingClientRect(); this.zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2); return; }
@@ -1716,12 +1809,19 @@
   };
 
   Editor.prototype.stopSimulation = function () {
+    if (this.codeRunner) {
+      this.codeRunner.stop();
+      this.codeRunner = null;
+    }
+    this.codeRunning = false;
+    this.codeIO = {};
     this.simRunning = false;
     this.simResult = null;
     this.$stage.classList.remove('sim-running');
     this.$simBtn.classList.remove('running');
     this.$simBtn.innerHTML = svgIcon('play') + '<span id="sim-btn-label">开始模拟</span>';
     this.$simBtnLabel = this.mount.querySelector('#sim-btn-label');
+    this.updateCodeUI();
     this.renderScene();
     this.$hud.classList.remove('show');
     this.renderInspector();
@@ -1732,13 +1832,14 @@
   Editor.prototype.runSimulation = function (quiet, opts) {
     const o = opts || {};
     try {
-      const result = E.simulate(this.scene);
+      const io = this.codeRunning && this.codeIO && Object.keys(this.codeIO).length ? this.codeIO : {};
+      const result = E.simulate(this.scene, { io: io });
       this.simResult = result;
       this.renderWires();
       this.renderComponents();
       this.renderPins();
       if (!o.skipInspector) this.renderInspector();
-      this.renderTask();
+      if (!o.skipTask) this.renderTask();
       this.updateSimUi();
       this.updateStatus();
       return result;
@@ -1782,6 +1883,276 @@
   };
 
   /* ------------------------------------------------------------------
+     Code lab
+     ------------------------------------------------------------------ */
+  Editor.prototype.findArduino = function () {
+    return this.scene.components.find(function (c) { return c.type === 'arduino-uno'; }) || null;
+  };
+
+  Editor.prototype.refreshCodeAvailability = function () {
+    if (!this.codeOpen) return;
+    const uno = this.findArduino();
+    this.codeArduinoId = uno ? uno.id : null;
+    if (this.$codeBoardLabel) this.$codeBoardLabel.textContent = uno ? 'Arduino Uno · ' + (uno.id || 'uno') : '当前画布中没有 Arduino Uno';
+    this.renderCodeBlocks();
+    this.updateCodeUI();
+    if (!uno) this.setCodeStatus('当前画布中没有 Arduino Uno。可以打开 Arduino 编程示例，或从元件库拖入一块。', 'warn');
+  };
+
+  Editor.prototype.openCodePanel = function () {
+    if (!this.$codeDrawer) return;
+    this.codeOpen = true;
+    this.$codeDrawer.hidden = false;
+    this.$codeEntry.classList.add('active');
+    this.$stageWrap.classList.add('code-open');
+    const uno = this.findArduino();
+    this.codeArduinoId = uno ? uno.id : null;
+    this.$codeBoardLabel.textContent = uno ? 'Arduino Uno · ' + (uno.id || 'uno') : '当前画布中没有 Arduino Uno';
+    // Populate examples
+    this.$codeExample.innerHTML = BBL.Code.EXAMPLES.map((ex) => '<option value="' + ex.id + '">' + esc(ex.name) + '</option>').join('');
+    if (!BBL.Code.EXAMPLES.some((e) => e.id === this.codeExampleId)) this.codeExampleId = 'blink';
+    if (!this.codeText) this.loadCodeExample(this.codeExampleId, { silent: true, keepTab: true });
+    this.$codeExample.value = this.codeExampleId;
+    this.renderCodePanel();
+    this.setCodeTab(this.codeTab || 'blocks');
+    this.updateCodeUI();
+    if (!uno) {
+      this.setCodeStatus('当前画布中没有 Arduino Uno。可以打开 Arduino 编程示例，或从元件库拖入一块。', 'warn');
+    }
+    this.renderTask();
+  };
+
+  Editor.prototype.closeCodePanel = function () {
+    if (!this.codeOpen) return;
+    this.codeOpen = false;
+    this.$codeDrawer.hidden = true;
+    this.$codeEntry.classList.remove('active');
+    this.$stageWrap.classList.remove('code-open');
+    this.renderTask();
+    if (this.codeRunning) {
+      this.toast('代码仍在后台运行。点击工具栏「代码」查看串口或停止。');
+    }
+  };
+
+  Editor.prototype.toggleCodePanel = function () {
+    if (this.codeOpen) this.closeCodePanel();
+    else this.openCodePanel();
+  };
+
+  Editor.prototype.loadCodeExample = function (id, opts) {
+    const options = opts || {};
+    const ex = BBL.Code.EXAMPLES.find(function (e) { return e.id === id; }) || BBL.Code.EXAMPLES[0];
+    if (this.codeRunning) this.stopCode({ silent: true });
+    this.codeExampleId = ex.id;
+    this.codeText = ex.code;
+    this.scene.code = { exampleId: ex.id, text: ex.code };
+    if (this.$codeExample) this.$codeExample.value = ex.id;
+    if (this.$codeText) this.$codeText.value = ex.code;
+    this.renderCodeBlocks();
+    this.renderCodePanel();
+    this.updateCodeUI();
+    if (!options.silent) this.setCodeStatus('已载入「' + ex.name + '」示例。可以直接运行，或切到「文本」修改。', 'ok');
+    this.scheduleAutosave();
+    this.renderTask();
+  };
+
+  Editor.prototype.renderCodePanel = function () {
+    if (!this.$codeDrawer) return;
+    const uno = this.findArduino();
+    this.$codeBoardLabel.textContent = uno ? 'Arduino Uno · ' + (uno.id || 'uno') : '当前画布中没有 Arduino Uno';
+    if (!this.codeText) {
+      const ex = BBL.Code.EXAMPLES.find((e) => e.id === this.codeExampleId) || BBL.Code.EXAMPLES[0];
+      this.codeText = ex.code;
+    }
+    if (this.$codeText && document.activeElement !== this.$codeText) this.$codeText.value = this.codeText;
+    this.renderCodeBlocks();
+    this.renderSerial();
+    if (!this.codeRunning && !this.$codeStatus.textContent) this.setCodeStatus('修改代码后点击「运行」。', 'ok');
+    this.updateCodeUI();
+  };
+
+  Editor.prototype.setCodeTab = function (tab) {
+    this.codeTab = tab;
+    this.$codeDrawer.querySelectorAll('[data-code-tab]').forEach((b) => b.classList.toggle('active', b.dataset.codeTab === tab));
+    this.$codeBlocks.hidden = tab !== 'blocks';
+    this.$codeTextPane.hidden = tab !== 'text';
+    if (tab === 'text' && this.$codeText && document.activeElement !== this.$codeText) this.$codeText.value = this.codeText;
+  };
+
+  Editor.prototype.renderCodeBlocks = function () {
+    if (!this.$codeBlocks) return;
+    const ex = BBL.Code.EXAMPLES.find((e) => e.id === this.codeExampleId) || BBL.Code.EXAMPLES[0];
+    const uno = this.findArduino();
+    let banner = '';
+    if (!uno) {
+      banner = '<div class="code-no-arduino">' + svgIcon('warning') +
+        '<div><strong>这块画布还没有 Arduino</strong><span>打开 Arduino 编程示例，或从元件库拖入 Arduino Uno 后再运行代码。</span></div>' +
+        '<a class="btn sm" href="#/editor?template=arduino-blink&task=arduino-blink&code=1">打开编程示例</a></div>';
+    }
+    const blocks = ex.blocks.map((b) => {
+      if (b.kind === 'event') return '<div class="code-block event">' + svgIcon('play') + '<span>' + esc(b.text) + '</span></div>';
+      const icon = b.icon === 'wait' ? 'clock' : b.icon === 'serial' ? 'terminal' : b.icon === 'if' ? 'branch' : b.icon === 'read' ? 'cursor' : b.icon === 'pwm' ? 'bolt' : b.icon === 'low' ? 'minus' : 'plus';
+      return '<div class="code-block ' + (b.icon || '') + '">' + svgIcon(icon) + '<span>' + esc(b.text) + '</span></div>';
+    }).join('');
+    this.$codeBlocks.innerHTML = banner +
+      '<div class="code-example-head"><div><span class="pill blue">' + esc(ex.badge) + '</span><h4>' + esc(ex.name) + '</h4><p>' + esc(ex.description) + '</p></div><span class="code-example-pin">D13 · D9 · D2 · A0</span></div>' +
+      '<div class="code-flow">' + blocks + '</div>' +
+      '<div class="code-blocks-note">' + svgIcon('info') + ' 积木视图展示示例结构；切换到「文本」可以直接修改并运行代码。</div>';
+  };
+
+  Editor.prototype.setCodeStatus = function (text, type) {
+    if (!this.$codeStatus) return;
+    this.$codeStatus.textContent = text;
+    this.$codeStatus.className = 'code-status ' + (type || '');
+  };
+
+  Editor.prototype.updateCodeUI = function () {
+    if (!this.$codeDrawer) return;
+    const running = this.codeRunning;
+    this.$codeEntry.classList.toggle('running', running);
+    this.$codeEntry.classList.toggle('active', this.codeOpen);
+    const runBtn = this.$codeDrawer.querySelector('[data-action="code-run"]');
+    const stopBtn = this.$codeDrawer.querySelector('[data-action="code-stop"]');
+    if (runBtn) runBtn.disabled = running || !this.findArduino();
+    if (stopBtn) stopBtn.disabled = !running;
+    this.$codeDrawer.querySelectorAll('.code-tab').forEach((b) => b.classList.toggle('disabled', false));
+    if (this.$codeExample) this.$codeExample.disabled = running;
+    if (running) this.setCodeStatus('代码运行中 · 输出由 Arduino 引脚控制', 'running');
+    else if (this.codeText && this.findArduino()) this.setCodeStatus('就绪 · 修改代码后点击「运行」', 'ok');
+    this.renderTask();
+  };
+
+  Editor.prototype.startCode = function () {
+    const uno = this.findArduino();
+    if (!uno) {
+      this.setCodeStatus('当前画布中没有 Arduino Uno。请先打开 Arduino 编程示例。', 'error');
+      this.toast('当前画布中没有 Arduino Uno。', 'warn');
+      return;
+    }
+    if (this.codeRunning) return;
+    if (!this.codeText) this.loadCodeExample(this.codeExampleId, { silent: true });
+    try { BBL.Code.parseSketch(this.codeText); }
+    catch (err) {
+      this.setCodeStatus('语法错误：' + err.message, 'error');
+      this.toast('代码有错误：' + err.message, 'error');
+      return;
+    }
+    this.codeArduinoId = uno.id;
+    this.codeIO = {};
+    this.codeIO[uno.id] = {};
+    this.codeRunning = true;
+    this.serialLines = [];
+    this.renderSerial();
+    if (!this.simRunning) this.startSimulation();
+    this.runSimulation(false, { skipInspector: true });
+    const self = this;
+    this.codeRunner = new BBL.Code.Runner(this.codeText, {
+      onPinMode: function (pin, mode) {
+        const io = self.codeIO[uno.id] || (self.codeIO[uno.id] = {});
+        io[pin] = Object.assign(io[pin] || {}, { mode: mode });
+        self.runSimulation(false, { skipInspector: true, skipTask: true });
+      },
+      onDigitalWrite: function (pin, value) {
+        const io = self.codeIO[uno.id] || (self.codeIO[uno.id] = {});
+        io[pin] = { mode: 'OUTPUT', value: value ? 1 : 0, pwm: false };
+        self.scheduleCodeSim();
+      },
+      onAnalogWrite: function (pin, value) {
+        const io = self.codeIO[uno.id] || (self.codeIO[uno.id] = {});
+        io[pin] = { mode: 'OUTPUT', value: value, pwm: true };
+        self.scheduleCodeSim();
+      },
+      onDigitalRead: function (pin) { return self.readCodeDigital(pin); },
+      onAnalogRead: function (pin) { return self.readCodeAnalog(pin); },
+      onSerial: function (text) { self.appendSerial(text); },
+      onError: function (message) {
+        self.codeRunning = false;
+        self.codeRunner = null;
+        self.codeIO = {};
+        if (self.simRunning) self.runSimulation(false, { skipInspector: true });
+        self.updateCodeUI();
+        self.setCodeStatus('运行错误：' + message, 'error');
+        self.toast('代码运行停止：' + message, 'error');
+      }
+    });
+    this.codeRunner.start();
+    if (this.codeRunning) {
+      this.setCodeStatus('代码已启动 · 正在控制 Arduino 引脚', 'running');
+      this.updateCodeUI();
+      this.renderTask();
+    }
+  };
+
+  Editor.prototype.stopCode = function (opts) {
+    const options = opts || {};
+    if (this.codeRunner) {
+      this.codeRunner.stop();
+      this.codeRunner = null;
+    }
+    const was = this.codeRunning;
+    this.codeRunning = false;
+    this.codeIO = {};
+    if (!options.skipSim && this.simRunning) this.runSimulation(false, { skipInspector: true });
+    this.updateCodeUI();
+    if (was && !options.silent) {
+      this.setCodeStatus('代码已停止，Arduino 引脚回到高阻态。', 'ok');
+      this.toast('代码已停止。');
+    }
+    this.renderTask();
+  };
+
+  Editor.prototype.readCodeDigital = function (pin) {
+    if (!this.codeArduinoId || !this.simResult) return 0;
+    const p = this.simResult.pins[this.codeArduinoId] && this.simResult.pins[this.codeArduinoId][pin];
+    if (!p) return 0;
+    return p.voltage > 2.5 ? 1 : 0;
+  };
+
+  Editor.prototype.scheduleCodeSim = function () {
+    if (!this.codeRunning || this._codeSimPending) return;
+    this._codeSimPending = true;
+    const self = this;
+    requestAnimationFrame(function () {
+      self._codeSimPending = false;
+      if (self.codeRunning && self.simRunning) self.runSimulation(false, { skipInspector: true, skipTask: true });
+    });
+  };
+
+  Editor.prototype.readCodeAnalog = function (pin) {
+    if (!this.codeArduinoId || !this.simResult) return 0;
+    const p = this.simResult.pins[this.codeArduinoId] && this.simResult.pins[this.codeArduinoId][pin];
+    if (!p) return 0;
+    return Math.max(0, Math.min(1023, Math.round(p.voltage / 5 * 1023)));
+  };
+
+  Editor.prototype.renderSerial = function () {
+    if (!this.$serialOutput) return;
+    if (!this.serialLines.length) {
+      this.$serialOutput.innerHTML = '<span class="serial-empty">运行代码后，Serial.println 的输出会出现在这里。</span>';
+      return;
+    }
+    this.$serialOutput.innerHTML = this.serialLines.map((line) => '<div class="serial-line">' + esc(line) + '</div>').join('');
+    this.$serialOutput.scrollTop = this.$serialOutput.scrollHeight;
+  };
+
+  Editor.prototype.appendSerial = function (text) {
+    String(text).split('\n').forEach((line) => {
+      if (line !== '') this.serialLines.push(line);
+    });
+    if (this.serialLines.length > 300) this.serialLines = this.serialLines.slice(-300);
+    if (this.codeOpen) this.renderSerial();
+  };
+
+  Editor.prototype.clearSerial = function () {
+    this.serialLines = [];
+    this.renderSerial();
+  };
+
+  Editor.prototype.resetExampleCode = function () {
+    this.loadCodeExample(this.codeExampleId);
+  };
+
+  /* ------------------------------------------------------------------
      Task panel
      ------------------------------------------------------------------ */
   Editor.prototype.taskState = function () {
@@ -1815,6 +2186,9 @@
         case 'both-low': return switchVals.length >= 2 && switchVals.every((v) => v === 1);
         case 'and-led': case 'or-led': case 'not-led': case 'nor-led': case 'sum-lit': return lit;
         case 'carry-lit': return !!(r && r.leds.some((l) => l.compId === 'led2' && l.on && l.current > 0.0005));
+        case 'arduino-part': return !!this.findArduino();
+        case 'code-open': return this.codeOpen || this.codeRunning;
+        case 'code-running': return this.codeRunning;
         case 'buzzer': return !!(r && Object.values(r.components).some((c) => c.buzzer));
         case 'motor': return !!(r && Object.values(r.components).some((c) => c.motor > 0.2));
         case 'servo': return !!(r && Object.values(r.components).some((c) => c.servoPowered));
@@ -1846,7 +2220,9 @@
         <div class="task-steps">${steps.map((s, i) => `<div class="task-step ${s.done ? 'done' : (s === steps.find((x) => !x.done) ? 'current' : '')}"><span class="step-dot">${s.done ? svgIcon('check') : i + 1}</span><span>${esc(s.text)}</span></div>`).join('')}</div>
         ${complete ? `<div class="task-success">${svgIcon('sparkle')}<span>${esc(task.success)}</span></div>` : ''}
         <div class="task-actions">
-          <button class="btn sm ${complete ? '' : 'accent'}" data-action="task-check">${this.simRunning ? svgIcon('stop') + ' 暂停' : svgIcon('play') + ' 运行检查'}</button>
+          ${this.taskId === 'arduino-blink'
+            ? `<button class="btn sm ${this.codeOpen ? '' : 'accent'}" data-action="toggle-code">${svgIcon('code')} ${this.codeOpen ? '关闭代码' : '打开代码编辑器'}</button>`
+            : `<button class="btn sm ${complete ? '' : 'accent'}" data-action="task-check">${this.simRunning ? svgIcon('stop') + ' 暂停' : svgIcon('play') + ' 运行检查'}</button>`}
           <button class="btn sm ghost" data-action="task-reset" title="重新载入本次实验">${svgIcon('reset')} 重置</button>
         </div>
       </div>
