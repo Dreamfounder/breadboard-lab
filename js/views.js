@@ -426,6 +426,68 @@
   /* ------------------------------------------------------------------
      Part detail
      ------------------------------------------------------------------ */
+  function pinKind(name) {
+    if (!name) return 'in';
+    if (name === 'VCC') return 'pwr';
+    if (name === 'GND') return 'gnd';
+    if (name === 'NC') return 'nc';
+    if (/Y$/.test(name)) return 'out';
+    return 'in';
+  }
+
+  function pinoutHTML(p) {
+    const E = BBL.Engine;
+    const names = E.pinNamesFor(p.id);
+    const def = E.DEFS[p.id];
+    if (!def) return '';
+    if (E.IC_GATES[p.id]) {
+      const ids = Object.keys(names).map(Number).sort((a, b) => a - b);
+      const bottom = ids.filter((n) => n <= 7);
+      const top = ids.filter((n) => n > 7).sort((a, b) => b - a);
+      const x = (i) => 200 + i * 55;
+      const pinLine = (n, side) => {
+        const i = side === 'top' ? top.indexOf(n) : bottom.indexOf(n);
+        const px = x(i);
+        const y1 = side === 'top' ? 45 : 205;
+        const y2 = side === 'top' ? 75 : 235;
+        const numY = side === 'top' ? 36 : 250;
+        const nameY = side === 'top' ? 98 : 184;
+        const nm = names[n] || String(n);
+        return '<g class="pin-node">' +
+          '<line x1="' + px + '" y1="' + y1 + '" x2="' + px + '" y2="' + y2 + '"/>' +
+          '<text class="pin-num" x="' + px + '" y="' + numY + '" text-anchor="middle">' + n + '</text>' +
+          '<text class="pin-name pn-' + pinKind(nm) + '" x="' + px + '" y="' + nameY + '" text-anchor="middle">' + esc(nm) + '</text>' +
+          '</g>';
+      };
+      const gates = (E.IC_GATES[p.id].gates || []).map((g, i) => {
+        const ins = [g.a, g.b, g.c, g.d].filter((n) => n != null).map((n) => names[n] || n).join(' + ');
+        return '<span><b>门 ' + (i + 1) + '</b> ' + esc(ins) + ' → ' + esc(names[g.y] || g.y) + '</span>';
+      }).join('');
+      return '<figure class="pinout-figure" role="img" aria-label="' + esc(p.name) + ' 引脚图">' +
+        '<svg class="pinout-svg" viewBox="0 0 760 285" xmlns="http://www.w3.org/2000/svg">' +
+        '<rect class="pinout-body" x="170" y="75" width="420" height="130" rx="10"/>' +
+        '<path class="pinout-notch" d="M350 75 A30 30 0 0 0 410 75"/>' +
+        '<text class="pinout-chip-name" x="380" y="140" text-anchor="middle">' + esc(p.name) + '</text>' +
+        '<text class="pinout-chip-sub" x="380" y="160" text-anchor="middle">' + esc(p.foot) + ' · DIP-14</text>' +
+        '<text class="pinout-foot" x="176" y="220" text-anchor="end">第 1 脚 ▶</text>' +
+        bottom.map((n) => pinLine(n, 'bottom')).join('') +
+        top.map((n) => pinLine(n, 'top')).join('') +
+        '</svg>' +
+        '<figcaption>按面包板横放的方向画：下排从左到右是 1–7，上排从左到右是 14–8；芯片缺口朝上，左下角圆点是第 1 脚。</figcaption>' +
+        '<div class="pinout-legend"><span class="pn-in">输入</span><span class="pn-out">输出</span><span class="pn-pwr">VCC</span><span class="pn-gnd">GND</span><span class="pn-nc">NC 空脚</span></div>' +
+        '<div class="pin-gates">' + gates + '</div>' +
+        '</figure>';
+    }
+    const nodes = (def.pins || []).map((pin) => {
+      const label = names[pin.id] || ('引脚 ' + pin.id);
+      return '<div class="pinout-node"><b>' + esc(String(pin.id).toUpperCase()) + '</b><span>' + esc(label) + '</span></div>';
+    }).join('');
+    return '<figure class="pinout-figure pinout-generic" role="img" aria-label="' + esc(p.name) + ' 引脚图">' +
+      '<div class="pinout-strip">' + nodes + '</div>' +
+      '<figcaption>每个方框是一个接点。两端元件没有方向时，两端可以互换；LED 这类有方向的元件要按名称接。</figcaption>' +
+      '</figure>';
+  }
+
   BBL.views.part = function (mount, id) {
     const p = BBL.partById(id);
     if (!p) { emptyPage(mount, '没有找到这个元件', '回到元件百科重新选择。'); return; }
@@ -440,7 +502,7 @@
       '<div class="chips">' + p.tags.map((t) => '<span class="pill blue">' + esc(t) + '</span>').join('') + '</div></div></div></section>' +
       '<div class="container part-detail-layout"><div class="part-doc">' +
       '<section class="doc-card"><h2>' + svgIcon('info') + ' 这是什么</h2><div class="part-plain-box"><b>人话版</b><p>' + esc(p.plain || p.lede) + '</p></div>' + (p.why ? '<div class="part-why"><b>为什么需要它</b><p>' + esc(p.why) + '</p></div>' : '') + '<p class="part-tech-note">下面的参数和引脚说明是给需要深入的人看的，不需要一次记住。</p><details class="part-tech-details"><summary>想深入一点？展开专业说明</summary><p>' + esc(p.lede) + '</p><ul class="doc-list">' + p.usage.map((u) => '<li>' + esc(u) + '</li>').join('') + '</ul></details></section>' +
-      '<section class="doc-card"><h2>' + svgIcon('pin') + ' 引脚与规格</h2><p class="part-tech-note">接线时再来查这张表即可，不需要背。</p><table class="pin-doc"><thead><tr><th>编号</th><th>名称</th><th>说明</th></tr></thead><tbody>' + p.pins.map((pin) => '<tr><td>' + esc(pin.n) + '</td><td>' + esc(pin.name) + '</td><td>' + esc(pin.desc) + '</td></tr>').join('') + '</tbody></table>' +
+      '<section class="doc-card"><h2>' + svgIcon('pin') + ' 引脚与规格</h2>' + pinoutHTML(p) + '<p class="part-tech-note">接线时再来查这张表即可，不需要背。</p><table class="pin-doc"><thead><tr><th>编号</th><th>名称</th><th>说明</th></tr></thead><tbody>' + p.pins.map((pin) => '<tr><td>' + esc(pin.n) + '</td><td>' + esc(pin.name) + '</td><td>' + esc(pin.desc) + '</td></tr>').join('') + '</tbody></table>' +
       '<div class="spec-table">' + p.specs.map((s) => '<div>' + esc(s[0]) + '</div><div>' + esc(s[1]) + '</div>').join('') + '</div></section>' +
       '<section class="doc-card"><h2>' + svgIcon('warning') + ' 使用注意</h2><div class="doc-list">' + p.notes.map((n) => '<li>' + esc(n) + '</li>').join('') + '</div><div class="warn-box">' + svgIcon('bolt') + '<p>接线前断电，接好后再上电。第一次通电时先看电源电流，有异常立即断开。</p></div></section>' +
       '<section class="doc-card"><h2>' + svgIcon('flask') + ' 马上做一个小实验</h2><p style="font-weight:600;color:#111827">' + esc(p.experiment.title) + '</p><p>' + esc(p.experiment.body) + '</p><a class="btn primary sm" href="#/sandbox" style="margin-top:14px">' + svgIcon('flask') + ' 在自由实验中试试</a></section>' +

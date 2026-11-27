@@ -57,6 +57,35 @@
     'vibration-motor': { name: '振动电机', pins: [{ id: '+', x: -13, y: 0 }, { id: '-', x: 13, y: 0 }], props: {}, bounds: { x: -17, y: -36, w: 34, h: 40 } }
   };
 
+  const PIN_NAMES = {
+    resistor: { 1: '引脚 1', 2: '引脚 2' },
+    led: { a: '阳极 A（长脚）', k: '阴极 K（短脚）' },
+    button: { 1: '触点 1', 2: '触点 2' },
+    potentiometer: { 1: '端点 A', 2: '滑片 W', 3: '端点 B' },
+    capacitor: { 1: '引脚 1', 2: '引脚 2' },
+    'slide-switch': { 1: '端点 A', 2: '公共 COM', 3: '端点 B' },
+    buzzer: { '+': '正极 +', '-': '负极 −' },
+    'power-supply': { 'V+': '正极 V+', GND: '负极 GND' },
+    'battery-9v': { '+': '正极 +', '-': '负极 −' },
+    'coin-cell': { '+': '正极 +', '-': '负极 −' },
+    'aa-battery': { '+': '正极 +', '-': '负极 −' },
+    'arduino-uno': { '5v': '5V 输出', gnd: 'GND', d13: 'D13 / 板载 LED', d9: 'D9 / PWM', d2: 'D2 / 数字输入', a0: 'A0 / 模拟输入' },
+    microbit: { '3v': '3V 输出', gnd: 'GND', p0: 'P0' },
+    'dc-motor': { 1: 'M+', 2: 'M−' },
+    servo: { gnd: 'GND（棕）', vcc: 'V+（红）', sig: 'SIG（橙）' },
+    'vibration-motor': { '+': '正极 +', '-': '负极 −' }
+  };
+
+  const IC_PIN_NAMES = {
+    ic74hc08: { 1: '1A', 2: '1B', 3: '1Y', 4: '2A', 5: '2B', 6: '2Y', 7: 'GND', 8: '3Y', 9: '3A', 10: '3B', 11: '4Y', 12: '4A', 13: '4B', 14: 'VCC' },
+    ic74hc32: { 1: '1A', 2: '1B', 3: '1Y', 4: '2A', 5: '2B', 6: '2Y', 7: 'GND', 8: '3Y', 9: '3A', 10: '3B', 11: '4Y', 12: '4A', 13: '4B', 14: 'VCC' },
+    ic74hc86: { 1: '1A', 2: '1B', 3: '1Y', 4: '2A', 5: '2B', 6: '2Y', 7: 'GND', 8: '3Y', 9: '3A', 10: '3B', 11: '4Y', 12: '4A', 13: '4B', 14: 'VCC' },
+    ic74hc04: { 1: '1A', 2: '1Y', 3: '2A', 4: '2Y', 5: '3A', 6: '3Y', 7: 'GND', 8: '4Y', 9: '4A', 10: '5Y', 11: '5A', 12: '6Y', 13: '6A', 14: 'VCC' },
+    ic74hc02: { 1: '1Y', 2: '1A', 3: '1B', 4: '2Y', 5: '2A', 6: '2B', 7: 'GND', 8: '3A', 9: '3B', 10: '3Y', 11: '4A', 12: '4B', 13: '4Y', 14: 'VCC' },
+    ic74hc20: { 1: '1A', 2: '1B', 3: 'NC', 4: '1C', 5: '1D', 6: '1Y', 7: 'GND', 8: '2Y', 9: '2D', 10: '2C', 11: 'NC', 12: '2B', 13: '2A', 14: 'VCC' },
+    ic74hc21: { 1: '1A', 2: '1B', 3: 'NC', 4: '1C', 5: '1D', 6: '1Y', 7: 'GND', 8: '2Y', 9: '2D', 10: '2C', 11: 'NC', 12: '2B', 13: '2A', 14: 'VCC' }
+  };
+
   const SOURCE_TYPES = {
     'power-supply': { v: function (p) { return p.voltage || 5; }, r: 0.15, plus: 'V+', minus: 'GND' },
     'battery-9v': { v: function () { return 9; }, r: 0.5, plus: '+', minus: '-' },
@@ -1479,6 +1508,9 @@
   BBL.Engine = {
     PITCH: PITCH,
     DEFS: DEFS,
+    pinNamesFor: function (type) {
+      return IC_PIN_NAMES[type] || PIN_NAMES[type] || {};
+    },
     IC_GATES: IC_GATES,
     SOURCE_TYPES: SOURCE_TYPES,
     ROW_Y: ROW_Y,

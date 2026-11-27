@@ -610,6 +610,38 @@ table.truth td.out { background: #f3fbf7; color: var(--accent-deep); font-weight
 .doc-list li { position: relative; padding-left: 17px; font-size: 12px; color: var(--muted); line-height: 1.7; }
 .doc-list li::before { content: ""; position: absolute; left: 4px; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: #b9c8e3; }
 .doc-list li strong { color: var(--ink-2); }
+.pinout-figure { margin: 14px 0 4px; padding: 14px 15px 11px; border: 1px solid #e4ebf4; border-radius: 12px; background: linear-gradient(180deg, #fbfdff, #f6f9fd); overflow: hidden; }
+.pinout-svg { display: block; width: 100%; height: auto; max-height: 330px; }
+.pinout-body { fill: #20262e; stroke: #0f141a; stroke-width: 1.5; }
+.pinout-notch { fill: #fbfdff; }
+.pinout-chip-name { fill: #f8fafc; font-size: 18px; font-weight: 750; letter-spacing: .03em; }
+.pinout-chip-sub { fill: #94a3b8; font-size: 8.5px; letter-spacing: .08em; }
+.pin-node line { stroke: #64748b; stroke-width: 2; stroke-linecap: round; }
+.pin-num { fill: #475569; font-size: 9px; font-weight: 700; }
+.pin-name { font-size: 9px; font-weight: 750; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pin-name.pn-in { fill: #93c5fd; }
+.pin-name.pn-out { fill: #6ee7b7; }
+.pin-name.pn-pwr { fill: #fca5a5; }
+.pin-name.pn-gnd { fill: #cbd5e1; }
+.pin-name.pn-nc { fill: #64748b; }
+.pinout-foot { fill: #64748b; font-size: 8.5px; }
+.pinout-figure figcaption { margin-top: 8px; font-size: 9.5px; line-height: 1.65; color: var(--muted-2); }
+.pinout-legend { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e3eaf3; }
+.pinout-legend span { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; color: var(--muted); }
+.pinout-legend span::before { content: ''; width: 7px; height: 7px; border-radius: 2px; background: currentColor; }
+.pinout-legend .pn-in { color: #2563eb; }
+.pinout-legend .pn-out { color: #059669; }
+.pinout-legend .pn-pwr { color: #dc2626; }
+.pinout-legend .pn-gnd { color: #475569; }
+.pinout-legend .pn-nc { color: #94a3b8; }
+.pin-gates { display: grid; gap: 4px; margin-top: 8px; }
+.pin-gates span { font-size: 9.5px; color: var(--ink-2); }
+.pin-gates b { display: inline-block; min-width: 32px; color: var(--brand); font-size: 9px; }
+.pinout-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 7px; }
+.pinout-node { display: flex; align-items: center; gap: 7px; padding: 8px 9px; border: 1px solid #e6edf6; border-radius: 8px; background: #fff; }
+.pinout-node b { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 22px; padding: 0 5px; border-radius: 5px; background: #eef4ff; color: #2563eb; font-size: 9px; font-family: ui-monospace, monospace; }
+.pinout-node span { font-size: 10px; color: var(--ink-2); line-height: 1.4; }
+
 .pin-doc { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 12px; }
 .pin-doc th { text-align: left; padding: 8px 10px; background: #f8fafd; color: var(--muted); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid var(--line); }
 .pin-doc td { padding: 8px 10px; border-bottom: 1px solid #f2f4f8; color: var(--muted); }
