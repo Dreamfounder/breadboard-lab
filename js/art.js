@@ -286,8 +286,6 @@
       // Cathode (K, short lead): straight and visibly shorter.
       '<path d="M' + k.x + ' ' + k.y + ' L10 -8 L8 -17" fill="none" stroke="#64748b" stroke-width="2.8" stroke-linecap="round"/>' +
       '<path d="M-8 -17 L-8 -21 M8 -17 L8 -21" stroke="#475569" stroke-width="2.2"/>' +
-      '<text x="' + (a.x - 2) + '" y="' + (a.y + 10) + '" text-anchor="middle" font-family="monospace" font-size="7.8" font-weight="800" fill="#1d4ed8" stroke="#ffffff" stroke-width="2.2" paint-order="stroke">A 长</text>' +
-      '<text x="' + (k.x + 2) + '" y="' + (k.y + 10) + '" text-anchor="middle" font-family="monospace" font-size="7.8" font-weight="800" fill="#334155" stroke="#ffffff" stroke-width="2.2" paint-order="stroke">K 短</text>' +
       '<rect x="-11" y="-22" width="22" height="4.6" rx="1.4" fill="#cbd5e1" stroke="#94a3b8" stroke-width=".6"/>' +
       '<circle class="led-core ' + (b ? 'on' : '') + '" cx="0" cy="' + (cy) + '" r="11" fill="' + (b ? palette[0] : palette[1]) + '" stroke="' + palette[1] + '" stroke-width=".9" style="color:' + palette[0] + ';fill:' + (b ? '#ff6262' : palette[1]) + '"/>' +
       '<path d="M10.5 -24 L11.5 -18" stroke="#0f172a" stroke-width="1.2" stroke-linecap="round"/>' +
