@@ -10,6 +10,7 @@
   function h16(v) { return '0x' + (Number(v) & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); }
   function bits(v) { return (Number(v) & 0xFF).toString(2).padStart(8, '0'); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function svgIcon(name) { return '<svg class="icon" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; }
 
   BBL.views.asmLab = function (mount, id) {
     const level = BBL.LABS.getLevel(id);
@@ -38,6 +39,7 @@
       '<button class="btn sm primary" id="asm-run">▶ 运行</button>' +
       '<button class="btn sm" id="asm-step">单步</button>' +
       '<button class="btn sm" id="asmreset">重置</button>' +
+      '<button class="btn sm" id="asm-archive">存档</button>' +
       '<button class="btn sm accent" id="asm-check">检查作业</button></div></div>' +
       '<textarea id="asm-code" spellcheck="false" autocomplete="off" aria-label="8051 汇编代码">' + esc(code) + '</textarea>' +
       '<div class="asm-code-foot"><span id="asm-status">待运行</span><span id="asm-pc">PC = 0000h</span></div></div>' +
@@ -140,6 +142,60 @@
       loadSim(true); render();
     });
     mount.querySelector('#asm-check').addEventListener('click', doCheck);
+
+    const ASM_SAVE_KEY = 'bbl.asm.saves.v1';
+    function readAsmSaves() {
+      try { const v = JSON.parse(localStorage.getItem(ASM_SAVE_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+    }
+    function writeAsmSaves(v) { localStorage.setItem(ASM_SAVE_KEY, JSON.stringify(v)); }
+    function asmSaves() { return readAsmSaves().filter((s) => s.lab === id).sort((a, b) => b.updatedAt - a.updatedAt); }
+    function openAsmArchives() {
+      const saves = asmSaves();
+      const modal = BBL.ui.modal({
+        title: '8051 代码存档',
+        subtitle: '当前空间：' + cfg.title + ' · 只显示这个实验的代码存档。',
+        wide: true,
+        body: '<div class="design-toolbar"><input id="asm-save-name" class="design-name-input" maxlength="60" value="' + esc(cfg.title + ' · 代码') + '"><button class="btn primary" data-asm-create>' + svgIcon('save') + ' 保存当前代码</button></div>' +
+          '<div class="design-list">' + (saves.length ? saves.map((s) => {
+            const date = new Date(s.updatedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            return '<div class="design-row" data-asm-id="' + esc(s.id) + '"><div class="design-row-icon">' + svgIcon('code') + '</div><div class="design-row-main"><div><b>' + esc(s.name) + '</b></div><p>' + date + ' · ' + s.code.split(/\r?\n/).length + ' 行</p></div><div class="design-row-actions"><button class="btn sm primary" data-asm-open>打开</button><button class="btn sm" data-asm-export>导出 .asm</button><button class="btn sm danger" data-asm-delete>删除</button></div></div>';
+          }).join('') : '<div class="design-empty">还没有代码存档。给这段汇编起个名字，点“保存当前代码”。</div>') + '</div>',
+        footer: '<span class="design-foot">共 ' + saves.length + ' 个代码存档</span><button class="btn" data-close>关闭</button>'
+      });
+      modal.querySelector('[data-asm-create]').addEventListener('click', () => {
+        const name = modal.querySelector('#asm-save-name').value.trim() || cfg.title;
+        const list = readAsmSaves();
+        list.push({ id: 'a_' + Date.now().toString(36), lab: id, name: name, code: $code.value, updatedAt: Date.now() });
+        try {
+          writeAsmSaves(list);
+          BBL.ui.closeModal();
+          openAsmArchives();
+          BBL.ui.toast('已保存代码存档「' + name + '」', 'success');
+        } catch (e) { BBL.ui.toast('保存失败：' + e.message, 'error'); }
+      });
+      modal.querySelectorAll('.design-row').forEach((row) => {
+        const save = saves.find((s) => s.id === row.getAttribute('data-asm-id'));
+        if (!save) return;
+        row.querySelector('[data-asm-open]').addEventListener('click', () => {
+          $code.value = save.code;
+          try { localStorage.setItem(codeKey, save.code); } catch (e) {}
+          sim = new BBL.Asm.Simulator(save.code); sim.setP2(p2); sim.setP3(p2); render();
+          BBL.ui.closeModal();
+          BBL.ui.toast('已打开代码存档「' + save.name + '」', 'success');
+        });
+        row.querySelector('[data-asm-export]').addEventListener('click', () => {
+          const blob = new Blob([save.code], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob); const a = document.createElement('a');
+          a.href = url; a.download = (save.name || '8051').replace(/[\\/:*?"<>|]/g, '-') + '.asm';
+          document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+        });
+        row.querySelector('[data-asm-delete]').addEventListener('click', () => {
+          const list = readAsmSaves().filter((s) => s.id !== save.id);
+          writeAsmSaves(list); BBL.ui.closeModal(); openAsmArchives(); BBL.ui.toast('已删除代码存档');
+        });
+      });
+    }
+    mount.querySelector('#asm-archive').addEventListener('click', openAsmArchives);
 
     sim.setP2(p2);
     sim.setP3(p2);

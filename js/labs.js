@@ -361,8 +361,9 @@
       template: 'lab01-hw', taskId: 'lab01-hw', homework: true,
       brief: '完成 74HC20/04/21/86/32 的输出列，并为每种逻辑画一张电路图。',
       objective: '按 Lab 01 文档的 Assignment，逐片切换输入、记录输出，并提交观察报告和每张逻辑电路图。',
-      parts: [],
       plain: '这是 Lab 01 文档里的正式作业：把 5 片 IC 的真值表输出列填完，再给每种逻辑画一张 Tinkercad 电路图，最后交报告。',
+      parts: [],
+      libraryParts: ['ic74hc20', 'ic74hc04', 'ic74hc21', 'ic74hc86', 'ic74hc32', 'slide-switch', 'resistor', 'led', 'power-supply'],
       assignment: '按 Lab 01 文档的 Assignment：① 对 74HC20、74HC04、74HC21、74HC86、74HC32 逐片切换输入，完成每张真值表的 Output 列；② 用 tinkercad.com（或本站自由实验）为每种逻辑画一张原理图；③ 提交观察报告和每张逻辑的电路图。注意 74HC20/21 的 C/D 要接高。',
       worksheet: [
         { name: '74HC20 NAND', headers: ['Input A', 'Input B', 'Output'], rows: [['0', '0'], ['0', '1'], ['1', '0'], ['1', '1']] },
@@ -549,6 +550,37 @@
       checkpoints: ['三片 IC 都已放置并通电', '三个输入开关都接好', 'Sum 与 Cout 各有独立输出', '八行真值表自己填写并检查'],
       submit: '提交完整全加器电路图、八行真值表和最终截图。这一关的电路就是 Lab 02 的最终交付。'
     },
+    {
+      id: 'lab02-hw', track: 'lab02', number: 'HW', title: 'Lab 02 作业：半加器与全加器电路图',
+      en: 'Homework · Half and Full Adder', minutes: 40, difficulty: '作业',
+      template: 'lab02-hw', taskId: 'lab02-hw', homework: true,
+      brief: '按 Lab 02 文档搭建半加器和全加器，验证真值表并提交两张 Tinkercad 电路图。',
+      objective: '完成 Lab 02 的 Submission：Half Adder 和 Full Adder 的逻辑门电路图，以及两种电路输出值的截图。',
+      plain: '这是 Lab 02 文档里的正式作业：先搭半加器、再搭全加器，按真值表逐行验证，最后交两张 Tinkercad 电路图和输出截图。',
+      parts: [],
+      libraryParts: ['ic74hc86', 'ic74hc08', 'ic74hc32', 'slide-switch', 'resistor', 'led', 'power-supply'],
+      assignment: '按 Lab 02 文档的 Submission：① 用逻辑门搭建 Half Adder（XOR 得出 Sum，AND 得出 Carry），验证 4 行真值表；② 用两个半加器加一个 OR 搭建 Full Adder，验证 8 行真值表；③ 提交 Half Adder 和 Full Adder 的 Tinkercad 电路图，以及两种电路输出值的截图。',
+      worksheet: [
+        { name: 'Half Adder', headers: ['A', 'B', 'Sum', 'Carry'], rows: [['0', '0'], ['0', '1'], ['1', '0'], ['1', '1']] },
+        { name: 'Full Adder', headers: ['A', 'B', 'Carry In', 'Sum', 'Carry Out'], rows: [['0', '0', '0'], ['0', '0', '1'], ['0', '1', '0'], ['0', '1', '1'], ['1', '0', '0'], ['1', '0', '1'], ['1', '1', '0'], ['1', '1', '1']] }
+      ],
+      background: [
+        'Half Adder 只加两个 1 位数：Sum = A XOR B，Carry = A AND B。',
+        'Full Adder 再加一个低位进位 Cin：可以看成两个半加器，再用 OR 合并两个进位。',
+        'Lab 02 文档的清单是 74HC86 x2、74HC08 x2、74HC32 x2、LED x5、1kΩ x13；多出来的芯片和电阻是备用/扩展，不代表每个电路都要用完。'
+      ],
+      steps: [
+        { title: '搭半加器', body: '74HC86 门 1 做 XOR 得到 Sum；74HC08 门 1 做 AND 得到 Carry。', why: '半加器没有 Cin，只有两个输入和两个输出。' },
+        { title: '验证半加器', body: '逐行切换 A/B 的 00、01、10、11，填完 Sum 和 Carry 两列。', why: '文档要求输出和真值表一致。' },
+        { title: '搭全加器', body: '第一级半加器算 A、B；第二级半加器把第一级的 Sum 与 Cin 相加；两个进位用 74HC32 的 OR 合并。', why: '全加器就是两个半加器加一个 OR。' },
+        { title: '验证并提交', body: '逐行验证 8 种 A/B/Cin，截图 Sum/Cout，准备好两张 Tinkercad 电路图后点“提交作业”。', why: 'Submission 要的是两张电路图和输出截图。' }
+      ],
+      wiring: [],
+      pitfalls: ['把半加器的 Carry 当成 Full Adder 的 Cout，忘记 OR 合并第二级进位。', '两个半加器的输入接错。', '只交一张图，漏掉半加器或全加器。'],
+      checkpoints: ['半加器 4 行验证完成', '全加器 8 行验证完成', '两张 Tinkercad 电路图已准备', '点击了提交作业'],
+      submit: '提交 Half Adder 和 Full Adder 的逻辑门电路图，以及两种电路的输出值截图。'
+    },
+
     {
       id: 'mcu04', track: 'mcu', number: '04', title: 'Lab 04 · 8051 与汇编入门',
       en: 'Introduction to Microcontrollers', minutes: 45, difficulty: '8051',

@@ -108,8 +108,6 @@
     this.mount = mount;
     this.opts = opts || {};
     this.mode = this.opts.mode || 'editor';
-    this.storageKey = this.mode === 'sandbox' ? 'bbl.sandbox.v1' : 'bbl.editor.v1';
-    this.tool = 'select';
     this.tab = 'library';
     this.selection = null;
     this.snap = true;
@@ -136,7 +134,14 @@
     this.history = [];
     this.hIndex = -1;
     this.taskId = null;
-    this.labId = this.opts.labId || null;
+    const hintedLab = this.opts.labId || (BBL.LABS && (BBL.LABS.getLevel(this.opts.taskId || '') || BBL.LABS.getLevel(this.opts.template || '')));
+    this.labId = hintedLab ? hintedLab.id : null;
+    this.storageKey = this.labId ? ('bbl.lab.workspace.v1.' + this.labId) : (this.mode === 'sandbox' ? 'bbl.sandbox.v1' : 'bbl.editor.v1');
+    this.designScope = this.labId || (this.mode === 'sandbox' ? 'sandbox' : 'editor');
+    this.level = this.labId && BBL.LABS ? BBL.LABS.getLevel(this.labId) : null;
+    this.libraryPartIds = this.level && this.level.mode !== 'asm'
+      ? new Set([].concat(this.level.parts || [], this.level.choices || [], this.level.libraryParts || []))
+      : null;
     this.taskDoneShown = false;
     this._labRecorded = false;
     this._taskCollapsed = isMobile() || window.innerHeight < 980;
@@ -148,7 +153,13 @@
     if (!this.labId && BBL.LABS) {
       const level = (this.taskId && BBL.LABS.getLevel(this.taskId)) ||
         (this.scene.template && BBL.LABS.getLevel(this.scene.template));
-      if (level) this.labId = level.id;
+      if (level) {
+        this.labId = level.id;
+        this.storageKey = 'bbl.lab.workspace.v1.' + this.labId;
+        this.designScope = this.labId;
+        this.level = level;
+        this.libraryPartIds = new Set([].concat(level.parts || [], level.choices || [], level.libraryParts || []));
+      }
     }
     this.scene._holes = E.boardHoles(this.scene.board);
     if (this.scene.code) {
@@ -259,6 +270,7 @@
             <div class="project-name">
               <input id="project-name" value="${name}" maxlength="48" aria-label="项目名称" spellcheck="false">
               <span class="saved-badge" id="saved-badge">${svgIcon('check-circle')} 已保存</span>
+              ${this.labId ? '<span class="workspace-scope-badge">独立实验空间</span>' : ''}
             </div>
           </div>
         </div>
@@ -757,7 +769,7 @@
       const pins = def.pins;
       const labelText = (() => {
         if (comp.type === 'resistor') return Number(comp.props.resistance) >= 1000 ? (Number(comp.props.resistance) / 1000) + 'kΩ' : comp.props.resistance + 'Ω';
-        if (comp.type === 'led') return 'LED';
+        if (comp.type === 'led') return '';
         if (comp.type === 'button') return '按钮';
         if (comp.type === 'potentiometer') return '10k';
         if (comp.type === 'capacitor') return '104';
@@ -925,25 +937,132 @@
     return d;
   };
 
-  Editor.prototype.wirePath = function (a, b, seed, obstacles) {
+  Editor.prototype.curvePath = function (points, tension) {
+    const pts = points.filter((p, i) => i === 0 || Math.hypot(p.x - points[i - 1].x, p.y - points[i - 1].y) > 0.2);
+    if (pts.length < 2) return '';
+    const t = tension == null ? 0.8 : tension;
+    let d = 'M' + pts[0].x.toFixed(2) + ' ' + pts[0].y.toFixed(2);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2] || p2;
+      const c1x = p1.x + (p2.x - p0.x) / 6 * t;
+      const c1y = p1.y + (p2.y - p0.y) / 6 * t;
+      const c2x = p2.x - (p3.x - p1.x) / 6 * t;
+      const c2y = p2.y - (p3.y - p1.y) / 6 * t;
+      d += ' C' + c1x.toFixed(2) + ' ' + c1y.toFixed(2) + ' ' + c2x.toFixed(2) + ' ' + c2y.toFixed(2) + ' ' + p2.x.toFixed(2) + ' ' + p2.y.toFixed(2);
+    }
+    return d;
+  };
+
+  Editor.prototype.roundedPath = function (points, radius) {
+    const pts = points.filter((p, i) => i === 0 || Math.hypot(p.x - points[i - 1].x, p.y - points[i - 1].y) > 0.2);
+    if (pts.length < 2) return '';
+    let d = 'M' + pts[0].x.toFixed(2) + ' ' + pts[0].y.toFixed(2);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1], p1 = pts[i], p2 = pts[i + 1];
+      const l1 = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+      const l2 = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      if (l1 < 0.1 || l2 < 0.1) { d += ' L' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2); continue; }
+      const r = Math.min(radius, l1 / 2, l2 / 2);
+      const ax = p1.x - (p1.x - p0.x) / l1 * r;
+      const ay = p1.y - (p1.y - p0.y) / l1 * r;
+      const bx = p1.x + (p2.x - p1.x) / l2 * r;
+      const by = p1.y + (p2.y - p1.y) / l2 * r;
+      d += ' L' + ax.toFixed(2) + ' ' + ay.toFixed(2) + ' Q' + p1.x.toFixed(2) + ' ' + p1.y.toFixed(2) + ' ' + bx.toFixed(2) + ' ' + by.toFixed(2);
+    }
+    const last = pts[pts.length - 1];
+    d += ' L' + last.x.toFixed(2) + ' ' + last.y.toFixed(2);
+    return d;
+  };
+
+  Editor.prototype.chaikin = function (points, iterations) {
+    let pts = points.map((p) => ({ x: p.x, y: p.y }));
+    for (let k = 0; k < (iterations || 2) && pts.length > 2; k++) {
+      const out = [pts[0]];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        out.push({ x: a.x * 0.72 + b.x * 0.28, y: a.y * 0.72 + b.y * 0.28 });
+        out.push({ x: a.x * 0.28 + b.x * 0.72, y: a.y * 0.28 + b.y * 0.72 });
+      }
+      out.push(pts[pts.length - 1]);
+      pts = out;
+    }
+    return pts;
+  };
+
+  Editor.prototype.cubicClear = function (p0, p1, p2, p3, rects) {
+    if (!rects || !rects.length) return true;
+    for (let i = 1; i < 24; i++) {
+      const t = i / 24, u = 1 - t;
+      const x = u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x;
+      const y = u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y;
+      for (const r of rects) {
+        if (x > r.x + 1 && x < r.x + r.w - 1 && y > r.y + 1 && y < r.y + r.h - 1) return false;
+      }
+    }
+    return true;
+  };
+
+  Editor.prototype.wirePath = function (a, b, seed, obstacles, useBottomLane) {
     const dx = b.x - a.x, dy = b.y - a.y;
     const dist = Math.max(1, Math.hypot(dx, dy));
     const n = Number(seed) || 0;
-    const bend = ((n % 9) - 4);
-    let lift = Math.min(52, 16 + dist * 0.065) + bend * 3;
-    let cy = Math.min(a.y, b.y) - lift;
-    if (obstacles && obstacles.length && !this.segmentClear(a, b, obstacles)) {
-      let top = Infinity;
-      const minX = Math.min(a.x, b.x) - 4, maxX = Math.max(a.x, b.x) + 4;
-      obstacles.forEach((o) => {
-        if (o.x < maxX && o.x + o.w > minX) top = Math.min(top, o.y);
-      });
-      if (top !== Infinity) cy = Math.min(cy, top - 22);
+    if (dist < 34 && Math.abs(dy) < 24) {
+      const lift = 8 + (Math.abs(n) % 3) * 2;
+      const cy = Math.min(a.y, b.y) - lift;
+      return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' C' + a.x.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
     }
-    const sway = bend * 2.2;
-    const x1 = a.x + dx * 0.24 + sway;
-    const x2 = b.x - dx * 0.24 + sway;
-    return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
+    const rects = (obstacles || []).map((o) => ({
+      x: o.x - 14, y: o.y - 14, w: o.w + 28, h: o.h + 28
+    }));
+    const minY = Math.min(a.y, b.y), maxY = Math.max(a.y, b.y);
+    const minX = Math.min(a.x, b.x) - 10, maxX = Math.max(a.x, b.x) + 10;
+    if (this.segmentClear(a, b, rects)) {
+      const lift = Math.min(18, 8 + dist * 0.03) + (Math.abs(n) % 5) * 1.2;
+      const cy = Math.min(a.y, b.y) - lift;
+      const sway = ((Math.abs(n) % 7) - 3) * 1.3;
+      const c1 = { x: a.x + dx * 0.28 + sway, y: cy };
+      const c2 = { x: b.x - dx * 0.28 + sway, y: cy };
+      if (this.cubicClear(a, c1, c2, b, rects)) {
+        return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) +
+          ' C' + c1.x.toFixed(2) + ' ' + c1.y.toFixed(2) + ' ' + c2.x.toFixed(2) + ' ' + c2.y.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
+      }
+    }
+    let top = Infinity, bottom = -Infinity;
+    rects.forEach((o) => {
+      if (o.x < maxX && o.x + o.w > minX) {
+        top = Math.min(top, o.y);
+        bottom = Math.max(bottom, o.y + o.h);
+      }
+    });
+    const aboveLift = top === Infinity ? 18 : Math.max(18, minY - top + 18);
+    const belowLift = bottom === -Infinity ? 18 : Math.max(18, bottom - maxY + 18);
+    const sides = aboveLift <= belowLift ? [-1, 1] : [1, -1];
+    for (const side of sides) {
+      const base = side < 0 ? aboveLift : belowLift;
+      for (let extra = 0; extra < 4; extra++) {
+        const apex = side < 0 ? minY - base - extra * 11 : maxY + base + extra * 11;
+        const sway = ((Math.abs(n) % 7) - 3) * 2 + side * 2;
+        const c1 = { x: a.x + dx * 0.28 + sway, y: apex };
+        const c2 = { x: b.x - dx * 0.28 + sway, y: apex };
+        if (this.cubicClear(a, c1, c2, b, rects)) {
+          return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) +
+            ' C' + c1.x.toFixed(2) + ' ' + c1.y.toFixed(2) + ' ' + c2.x.toFixed(2) + ' ' + c2.y.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
+        }
+      }
+    }
+    const route = this.routeAround(a, b, rects);
+    if (route && route.length > 2) {
+      const clean = route.filter((p, i) => i === 0 || Math.hypot(p.x - route[i - 1].x, p.y - route[i - 1].y) > 2);
+      if (clean.length > 2) return this.curvePath(this.chaikin(clean, 2), 0.22);
+    }
+    // Last resort: a controlled arc above every obstacle in this x range.
+    const cy = Math.min(a.y, b.y, top === Infinity ? Infinity : top - 18) - 14 - (Math.abs(n) % 4) * 3;
+    const bend = ((Math.abs(n) % 5) - 2) * 2;
+    return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) +
+      ' C' + (a.x + dx * .26 + bend).toFixed(2) + ' ' + cy.toFixed(2) + ' ' + (b.x - dx * .26 + bend).toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
   };
 
   Editor.prototype.wireRouteSeed = function (w) {
@@ -1003,8 +1122,9 @@
     (this.scene.wires || []).forEach((w, index) => {
       const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
       if (!a || !b) return;
+      a.comp = w.a.comp; b.comp = w.b.comp;
       const blocked = obstacles.filter((o) => o.id !== w.a.comp && o.id !== w.b.comp);
-      const d = this.wirePath(a, b, this.wireRouteSeed(w) + index, blocked);
+      const d = this.wirePath(a, b, this.wireRouteSeed(w) + index, blocked, w.color === 'red' || w.color === 'black');
       this._wirePathCache[w.id] = d;
       const role = this.wireColorClass(w);
       const state = role ? '' : this.wireSimClass(w);
@@ -1028,6 +1148,7 @@
     (this.scene.wires || []).forEach((w) => {
       const a = this.anchorPoint(w.a), b = this.anchorPoint(w.b);
       if (!a || !b) return;
+      a.comp = w.a.comp; b.comp = w.b.comp;
       const role = this.wireColorClass(w);
       html += '<circle class="wire-cap-focus ' + role + '" cx="' + a.x.toFixed(2) + '" cy="' + a.y.toFixed(2) + '" r="3"/>';
       html += '<circle class="wire-cap-focus ' + role + '" cx="' + b.x.toFixed(2) + '" cy="' + b.y.toFixed(2) + '" r="3"/>';
@@ -1095,7 +1216,7 @@
   Editor.prototype.renderLibrary = function () {
     const cats = BBL.CATEGORIES;
     this.$chips.innerHTML = cats.map((c) => '<button class="chip' + ((this._cat || 'all') === c.id ? ' active' : '') + '" data-cat="' + c.id + '">' + c.label + '</button>').join('');
-    const parts = BBL.PARTS.filter((p) => p.id !== 'breadboard');
+    const parts = BBL.PARTS.filter((p) => p.id !== 'breadboard' && (!this.libraryPartIds || !this.libraryPartIds.size || this.libraryPartIds.has(p.id)));
     this.$libCount.textContent = parts.length;
     this.renderPartGrid();
   };
@@ -1103,7 +1224,7 @@
   Editor.prototype.renderPartGrid = function () {
     const q = (this.$search.value || '').trim().toLowerCase();
     const cat = this._cat || 'all';
-    let parts = BBL.PARTS.filter((p) => p.id !== 'breadboard');
+    let parts = BBL.PARTS.filter((p) => p.id !== 'breadboard' && (!this.libraryPartIds || !this.libraryPartIds.size || this.libraryPartIds.has(p.id)));
     if (cat !== 'all') parts = parts.filter((p) => p.cat === cat);
     if (q) {
       parts = parts.filter((p) => (p.name + ' ' + p.en + ' ' + p.tags.join(' ') + ' ' + p.short).toLowerCase().includes(q));
@@ -2732,6 +2853,9 @@
             if (this.taskId === 'lab01-hw') {
               return ['ic74hc20', 'ic74hc04', 'ic74hc21', 'ic74hc86', 'ic74hc32'].every((t) => s.components.some((c) => c.type === t));
             }
+            if (this.taskId === 'lab02-hw') {
+              return ['ic74hc86', 'ic74hc08', 'ic74hc32'].every((t) => s.components.some((c) => c.type === t));
+            }
             return comps.length >= 3;
           case 'hw-wired': return s.wires.length >= 6;
           case 'hw-run': return !!this.simRunning;
@@ -2978,7 +3102,8 @@
   Editor.prototype.openDesigns = function () {
     this.closeMenu();
     const self = this;
-    const designs = BBL.Designs.list();
+    const designs = BBL.Designs.list(this.designScope);
+    const scopeLabel = this.labId ? ((BBL.LABS.getLevel(this.labId) || {}).title || this.labId) : (this.mode === 'sandbox' ? '自由实验' : '通用电路');
     const defaultName = (this.$name && this.$name.value.trim()) || this.scene.name || '未命名设计';
     const rows = designs.length ? designs.map((d) => {
       const date = new Date(d.updatedAt || d.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -2994,7 +3119,7 @@
 
     const modal = BBL.ui.modal({
       title: '我的存档',
-      subtitle: '同一台浏览器里保存多份设计；不会上传服务器。',
+      subtitle: '当前空间：' + scopeLabel + ' · 只显示这个实验空间的存档；不会上传服务器。',
       wide: true,
       body: '<div class="design-toolbar"><input id="design-new-name" class="design-name-input" maxlength="60" placeholder="给这次设计起个名字" value="' + esc(defaultName) + '">' +
         '<button class="btn primary" data-design-create>' + svgIcon('save') + ' 保存为新存档</button>' +
@@ -3006,7 +3131,7 @@
     modal.querySelector('[data-design-create]').addEventListener('click', () => {
       const name = modal.querySelector('#design-new-name').value.trim() || defaultName;
       try {
-        const rec = BBL.Designs.create(name, this.serialize(), this.mode);
+        const rec = BBL.Designs.create(name, this.serialize(), this.mode, this.designScope);
         this.currentDesignId = rec.id;
         BBL.ui.closeModal();
         this.openDesigns();
@@ -3029,7 +3154,7 @@
             const data = JSON.parse(reader.result);
             const scene = data && data.scene && Array.isArray(data.scene.components) ? data.scene : data;
             if (!scene || !Array.isArray(scene.components) || !Array.isArray(scene.wires) || !scene.board) throw new Error('不是有效的电路 JSON');
-            BBL.Designs.create((data && data.name) || scene.name || file.name.replace(/\.json$/i, ''), scene, 'editor');
+            BBL.Designs.create((data && data.name) || scene.name || file.name.replace(/\.json$/i, ''), scene, 'editor', this.designScope);
             BBL.ui.closeModal();
             this.openDesigns();
             this.toast('已导入为新的存档', 'success');

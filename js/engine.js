@@ -1808,6 +1808,17 @@
       ],
       success: '比较器工作正常：三根输出线同一时刻只有一根为高。'
     },
+    'lab02-hw': {
+      kicker: 'Lab 02 · 作业', title: '半加器与全加器电路图',
+      summary: '按 Lab 02 文档搭建 Half Adder 和 Full Adder，验证真值表并提交两张 Tinkercad 电路图和输出截图。',
+      steps: [
+        { key: 'hw-parts', text: '从元件库放置 74HC86、74HC08、74HC32、电源、开关、电阻和 LED' },
+        { key: 'hw-wired', text: '先搭半加器，再搭全加器；Full Adder 用两个半加器加 OR' },
+        { key: 'hw-run', text: '运行仿真，逐行验证半加器 4 行和全加器 8 行' },
+        { key: 'hw-submit', text: '准备好两张 Tinkercad 电路图和输出截图后，点击“提交作业”' }
+      ],
+      success: 'Lab 02 作业已提交。保留 Half Adder 和 Full Adder 两张电路图及输出截图。'
+    },
     'lab01-hw': {
       kicker: 'Lab 01 · 作业', title: '五片 IC 真值表与电路图',
       summary: '按 Lab 01 文档的 Assignment：完成 74HC20/04/21/86/32 的输出列，并为每种逻辑提交一张电路图。',

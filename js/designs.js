@@ -14,7 +14,8 @@
   function read() {
     try {
       const data = JSON.parse(localStorage.getItem(KEY) || '[]');
-      return Array.isArray(data) ? data.filter((d) => d && d.id && d.scene) : [];
+      if (!Array.isArray(data)) return [];
+      return data.filter((d) => d && d.id && d.scene).map((d) => Object.assign({ scope: 'sandbox' }, d));
     } catch (e) { return []; }
   }
 
@@ -22,15 +23,17 @@
     localStorage.setItem(KEY, JSON.stringify(list));
   }
 
-  function list() {
-    return read().sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+  function list(scope) {
+    const data = read();
+    return data.filter((d) => !scope || d.scope === scope)
+      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
   }
 
   function get(id) {
     return read().find((d) => d.id === id) || null;
   }
 
-  function create(name, scene, mode) {
+  function create(name, scene, mode, scope) {
     const data = read();
     if (data.length >= MAX) {
       const err = new Error('存档数量已达上限（' + MAX + ' 个），请先删除不用的存档。');
@@ -44,6 +47,7 @@
       createdAt: now,
       updatedAt: now,
       mode: mode || 'editor',
+      scope: scope || 'sandbox',
       scene: clone(scene),
       meta: {
         components: (scene.components || []).length,
