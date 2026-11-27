@@ -27,6 +27,17 @@
       goals: ['明白“个位”和“进位”是什么', '用“不同才通过”和“都同意才通过”拼出半加器', '把两个半加器接成一个全加器', '自己填完输入输出表', '从空白画布独立搭出全加器']
     },
     {
+      id: 'mcu',
+      label: '8051 单片机',
+      title: '8051 Microcontroller',
+      cn: '8051 单片机',
+      course: 'WIX1003 Computer Systems & Organization',
+      source: 'Lab 04–06: 8051 IDE, architecture and basic I/O',
+      color: 'amber',
+      intro: '这一组是 Lab 04、05、06：先在 MCU 8051 IDE 里写汇编、看寄存器和数据存储器，再理解 8051 的内部结构，最后用 P1/P2 做基本输入输出。所有程序都在浏览器里的 8051 汇编实验台运行。',
+      goals: ['会写 MOV/ADD/ADDC/MOVX 并查看 2000h 结果', '理解 8051 的 ROM、RAM、SFR 和四个 I/O 口', '用 P1 输出二进制数', '用 P2 读取开关和按钮']
+    },
+    {
       id: 'co',
       label: '计算机组成',
       title: 'Computer Organization',
@@ -552,6 +563,81 @@
       checkpoints: ['完成 16 行真值表', '三个输出都接好', '至少验证三组输入', '点击了提交作业'],
       submit: '提交 2 位比较器的真值表、化简过程、电路图和测试截图。'
     },
+    {
+      id: 'mcu04', track: 'mcu', number: '04', title: 'Lab 04 · 8051 与汇编入门',
+      en: 'Introduction to Microcontrollers', minutes: 45, difficulty: '8051',
+      mode: 'asm', asmId: 'mcu04', brief: '在 MCU 8051 IDE 里建立工程，用汇编完成 D925h + 5A12h，并把结果写入 2000h。',
+      objective: '认识 MCU 8051 IDE、AT89S52 和汇编程序结构；用 MOV、ADD、ADDC、DPTR、MOVX 完成 16 位加法。',
+      plain: '这一关像用计算器算两个 16 位数，但你要自己写指令：先把两个数拆成高、低字节，先加低字节，再把进位带进高字节，最后把三个结果放进 2000h、2001h、2002h。',
+      parts: [],
+      background: [
+        '8051 是 8 位单片机：CPU、ROM、RAM、定时器、中断和 I/O 口都集成在一颗芯片里。实验用 AT89S52，8KB Flash、256 字节 RAM、4 个 8 位 I/O 口。',
+        '汇编程序由 ORG、标号、助记符和操作数组成。ORG 0000h 是复位入口，AJMP/LJMP 跳到主程序，END 告诉汇编器程序结束。',
+        '16 位加法要分两次做：先加低字节，保存 Sum1 和进位；再用 ADDC 加高字节，把进位一起加进去，最后把最终进位存到 2002h。',
+        'MOVX @DPTR,A 把累加器写到外部数据存储器；DPTR 先设为 2000h，再 INC DPTR 指向 2001h、2002h。'
+      ],
+      steps: [
+        { title: '建立工程', body: '打开 MCU 8051 IDE，新建工程，处理器选 8051/AT89S52，建立 ASM 文件。', why: '先让 IDE 知道目标芯片，汇编器才会按 8051 指令集翻译。' },
+        { title: '写主程序', body: '用 MOV 把 D925h 拆成低字节 25h、高字节 D9h；把 5A12h 拆成 12h、5Ah。', why: '8051 一次只能处理 8 位，16 位数必须拆成两个字节。' },
+        { title: '先加低字节', body: 'MOV A,R0；ADD A,R2；把结果写到 2000h。', why: 'ADD 会产生 Carry，但这里先保存低字节和。' },
+        { title: '再加高字节', body: 'MOV A,R1；ADDC A,R3；如果 C=1，用 INC R4 记下最终进位。', why: 'ADDC 会把低字节产生的进位一起加进来。' },
+        { title: '保存并检查', body: '把 Sum2 写到 2001h，把 R4 写到 2002h；单步运行，在数据存储器窗口查看 2000h–2002h。', why: '结果应与 PDF 的 13337h 一致：37h、33h、01h。' }
+      ],
+      wiring: [],
+      pitfalls: ['把 ADD 和 ADDC 混用，忘记低字节进位。', 'DPTR 忘了 INC，三个结果写到同一个地址。', '把 D925h 的高低位写反。'],
+      checkpoints: ['工程能编译通过', '低字节结果写入 2000h', '高字节结果写入 2001h', '最终进位写入 2002h'],
+      submit: '提交 ASM 代码、数据存储器 2000h–2002h 的截图，并说明 13337h 是怎么来的。'
+    },
+    {
+      id: 'mcu05', track: 'mcu', number: '05', title: 'Lab 05 · 认识 8051 内部结构',
+      en: 'Getting to Know the 8051 MCU', minutes: 40, difficulty: '8051',
+      mode: 'asm', asmId: 'mcu05', brief: '理解 8051 的 ROM、RAM、SFR 和 I/O 口，并让 P1 做 00h–FFh 二进制计数。',
+      objective: '认识 8051 的存储器组织和 SFR；用品振周期计算机器周期；用 P1 输出二进制计数。',
+      plain: '这一关是把 8051 的内部抽屉打开给你看：哪块放程序、哪块放数据、哪个寄存器管哪个口；然后让 P1 的 8 个 LED 像二进制秒表一样从 0 数到 255。',
+      parts: [],
+      background: [
+        '8051 的程序存储器（ROM/Flash）放代码，数据存储器（RAM）放临时数据。低 128 字节有寄存器组和位寻址区，高 128 字节与 SFR 地址重叠，靠直接/间接寻址区分。',
+        'SFR 是控制表：P0–P3 是 I/O 口，A/B 是累加器，PSW 是状态字，DPTR 是 16 位数据指针，TCON/TMOD/TL0/TH0 控制定时器。',
+        'AT89S52 用 12 MHz 晶振时，1 个机器周期 = 12 个振荡周期 = 1 μs。DJNZ 循环次数 × 机器周期就是延时。',
+        'P1 是 8 位输出口。把 00h 到 FFh 依次写到 P1，LED 就会按二进制从 00000000 数到 11111111。'
+      ],
+      steps: [
+        { title: '认识存储空间', body: '分清 ROM、内部 RAM、SFR 和外部数据存储器，知道 DPTR 与 MOVX 用在哪里。', why: '写汇编时先知道数据该放哪，才不会把代码和数据混在一起。' },
+        { title: '设置 P1 输出', body: 'MOV A,#00H；MOV P1,A，先把 P1 清 0。', why: 'P1 是输出口，写入的值直接决定 8 根引脚的高低。' },
+        { title: '写计数循环', body: 'INC A；MOV P1,A；SJMP 回到 INC，让 A 自然从 00h 加到 FFh 后回到 00h。', why: '8 位寄存器加到 FFh 再加 1 会自动溢出回 00h。' },
+        { title: '计算延时', body: '用 12 MHz、12 个振荡周期 = 1 个机器周期，算出 DJNZ 延时；在实验台观察 P1 的变化。', why: '延时决定 LED 变化速度，太快人眼看不见。' }
+      ],
+      wiring: [],
+      pitfalls: ['把 P1 和 P2 弄混，输出写到了输入口。', '循环里忘记 INC A，P1 一直不变。', '延时算错数量级，LED 闪得看不见。'],
+      checkpoints: ['P1 从 00h 开始', '能看到连续递增', '理解 ROM/RAM/SFR 的区别', '能解释 12 MHz 下 1 个机器周期'],
+      submit: '提交 00h–FFh 计数的 ASM 代码、P1 输出截图，并写出延时计算过程。'
+    },
+    {
+      id: 'mcu06', track: 'mcu', number: '06', title: 'Lab 06 · 8051 基本 I/O',
+      en: 'Basic I/O with 8051', minutes: 45, difficulty: '8051',
+      mode: 'asm', asmId: 'mcu06', brief: '用 P2 的按钮控制一个 4 位二进制加法计数器，计数值从 P1 的 LED 显示。',
+      objective: '理解 8051 的 I/O 口输入输出配置；用 JNB/JB 读按钮；用 P1 显示 4 位计数器。',
+      plain: '这一关让单片机学会“看按钮、点灯”：P2.4 像开关，P1 的四个灯像计分牌；按一下开始，再按一下停止，数字从 0 数到 15。',
+      parts: [],
+      background: [
+        '8051 有 4 个 8 位 I/O 口。写 0 到端口位可以把该位配置为输出，写 1 则作为输入；实际实验板常用上拉电阻和按钮把输入拉低。',
+        'P1 接 4 个 LED 显示低 4 位计数；P2.4 和 P2.5 接两个按钮。按钮按下为低电平，松开为高电平。',
+        '计数器用 A 保存当前值，INC A 加一，ANL A,#0FH 只保留低 4 位，再 MOV P1,A 显示。',
+        '启动/停止用边沿思想：先等按钮按下，再等松开，进入计数；计数中再检测按下就停止。'
+      ],
+      steps: [
+        { title: '配置端口', body: 'P1 作为输出接 4 个 LED；P2.4/P2.5 作为按钮输入。', why: '输入口必须先写 1（或由外部上拉），按钮才能把电平拉低。' },
+        { title: '等待启动', body: '用 JB P2.4 等待按钮按下，再用 JNB P2.4 等待松开，避免一次按下被当成多次。', why: '按钮有抖动，先等一个完整按下—松开动作，逻辑更稳定。' },
+        { title: '计数与显示', body: 'INC A；ANL A,#0FH；MOV P1,A；调用延时后循环。', why: '低 4 位正好对应 4 个 LED，计到 15 后回 0。' },
+        { title: '按钮停止', body: '在循环里用 JNB P2.4,STOP 检测再次按下，按下就回到等待启动。', why: '同一个按钮既启动又停止，程序要有明确的等待状态。' },
+        { title: '验证', body: '在实验台把 P2.4 切到 0 再切回 1 启动，观察 P1 低 4 位递增；再切到 0 停止。', why: '输入输出要配合观察，才能证明程序真的在跑。' }
+      ],
+      wiring: [],
+      pitfalls: ['按钮一直按着，程序停在等待松开。', '忘记 ANL A,#0FH，计数值超过 4 位。', '把 P2.4 当成输出，读不到按钮。'],
+      checkpoints: ['P2.4 能启动计数', 'P1 低 4 位递增', '再次按 P2.4 能停止', '能解释输入口为什么要先写 1'],
+      submit: '提交 4 位计数器的 ASM 代码、P1 LED 截图，以及按钮启动/停止的演示。'
+    },
+
     {
       id: 'co-adder', track: 'co', number: '01', title: '4 位加法器', en: '4-Bit Adder',
       minutes: 20, difficulty: '组合逻辑',

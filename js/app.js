@@ -79,6 +79,14 @@
       return;
     }
 
+    if (first === 'asm') {
+      setActiveNav('labs');
+      BBL.views.asmLab(view, seg[1]);
+      setTitle('8051 汇编实验台');
+      window.scrollTo(0, 0);
+      return;
+    }
+
     if (first === 'projects') {
       setActiveNav('projects');
       BBL.views.projects(view);
