@@ -267,11 +267,13 @@
           <button class="icon-btn head-undo" data-action="redo" title="重做 (Ctrl+Shift+Z)" aria-label="重做">${svgIcon('redo')}</button>
           <span class="head-divider"></span>
           <button class="btn ghost head-save" data-action="save">${svgIcon('save')}<span class="head-save-label">保存</span></button>
+          <button class="btn ghost head-designs" data-action="designs">${svgIcon('grid')}<span class="head-save-label">存档</span></button>
           <button class="sim-btn" id="sim-btn" data-action="simulate">${svgIcon('play')}<span id="sim-btn-label">开始模拟</span></button>
           <div class="more-wrap">
             <button class="icon-btn head-more" data-action="menu" aria-label="更多操作" aria-haspopup="true">${svgIcon('menu') || svgIcon('menu')}</button>
             <div class="menu" id="more-menu" hidden>
               <button data-action="save">${svgIcon('save')} 保存到浏览器</button>
+              <button data-action="designs">${svgIcon('grid')} 我的存档…</button>
               <button data-action="export">${svgIcon('download')} 导出电路 JSON</button>
               <button data-action="import">${svgIcon('upload')} 导入电路 JSON</button>
               <div class="sep"></div>
@@ -1809,6 +1811,7 @@
       if (action === 'undo') return this.undo();
       if (action === 'redo') return this.redo();
       if (action === 'save') return this.manualSave();
+      if (action === 'designs') { this.openDesigns(); return; }
       if (action === 'simulate') return this.toggleSimulation();
       if (action === 'menu') { this.$menu.hidden = !this.$menu.hidden; return; }
       if (action === 'export') return this.exportScene();
@@ -2958,8 +2961,156 @@
   Editor.prototype.manualSave = function () {
     this.autosaveNow();
     this.closeMenu();
-    this.toast('已保存到浏览器本地。需要备份或分享时，请用「导出电路 JSON」。');
+    if (this.currentDesignId && BBL.Designs.get(this.currentDesignId)) {
+      const name = (this.$name && this.$name.value.trim()) || this.scene.name || '未命名设计';
+      BBL.Designs.update(this.currentDesignId, { name: name, scene: this.serialize() });
+      this.scene.name = name;
+      this.toast('已更新存档「' + name + '」');
+      return;
+    }
+    this.toast('已保存到浏览器本地。需要多份设计时，请点「存档」。');
   };
+
+  Editor.prototype.openDesigns = function () {
+    this.closeMenu();
+    const self = this;
+    const designs = BBL.Designs.list();
+    const defaultName = (this.$name && this.$name.value.trim()) || this.scene.name || '未命名设计';
+    const rows = designs.length ? designs.map((d) => {
+      const date = new Date(d.updatedAt || d.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      return '<div class="design-row" data-design-id="' + esc(d.id) + '">' +
+        '<div class="design-row-icon">' + svgIcon('grid') + '</div>' +
+        '<div class="design-row-main"><div><b>' + esc(d.name) + '</b><span class="design-mode">' + esc(d.mode === 'sandbox' ? '自由实验' : '实验台') + '</span></div>' +
+        '<p>' + date + ' · ' + (d.meta ? d.meta.components : 0) + ' 个元件 · ' + (d.meta ? d.meta.wires : 0) + ' 条导线</p></div>' +
+        '<div class="design-row-actions"><button class="btn sm primary" data-design-open>打开</button>' +
+        '<button class="btn sm" data-design-rename>重命名</button>' +
+        '<button class="btn sm" data-design-export>导出</button>' +
+        '<button class="btn sm danger" data-design-delete>删除</button></div></div>';
+    }).join('') : '<div class="design-empty">还没有存档。给当前设计起个名字，点“保存为新存档”。</div>';
+
+    const modal = BBL.ui.modal({
+      title: '我的存档',
+      subtitle: '同一台浏览器里保存多份设计；不会上传服务器。',
+      wide: true,
+      body: '<div class="design-toolbar"><input id="design-new-name" class="design-name-input" maxlength="60" placeholder="给这次设计起个名字" value="' + esc(defaultName) + '">' +
+        '<button class="btn primary" data-design-create>' + svgIcon('save') + ' 保存为新存档</button>' +
+        '<button class="btn" data-design-import>' + svgIcon('upload') + ' 导入 JSON</button></div>' +
+        '<div class="design-list">' + rows + '</div>',
+      footer: '<span class="design-foot">共 ' + designs.length + ' 个存档 · 最多 ' + BBL.Designs.MAX + ' 个</span><button class="btn" data-close>关闭</button>'
+    });
+
+    modal.querySelector('[data-design-create]').addEventListener('click', () => {
+      const name = modal.querySelector('#design-new-name').value.trim() || defaultName;
+      try {
+        const rec = BBL.Designs.create(name, this.serialize(), this.mode);
+        this.currentDesignId = rec.id;
+        BBL.ui.closeModal();
+        this.openDesigns();
+        this.toast('已保存存档「' + name + '」', 'success');
+      } catch (err) {
+        this.toast('保存失败：' + err.message, 'error');
+      }
+    });
+
+    modal.querySelector('[data-design-import]').addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,application/json';
+      input.onchange = () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            const scene = data && data.scene && Array.isArray(data.scene.components) ? data.scene : data;
+            if (!scene || !Array.isArray(scene.components) || !Array.isArray(scene.wires) || !scene.board) throw new Error('不是有效的电路 JSON');
+            BBL.Designs.create((data && data.name) || scene.name || file.name.replace(/\.json$/i, ''), scene, 'editor');
+            BBL.ui.closeModal();
+            this.openDesigns();
+            this.toast('已导入为新的存档', 'success');
+          } catch (err) { this.toast('导入失败：' + err.message, 'error'); }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+
+    modal.querySelectorAll('.design-row').forEach((row) => {
+      const id = row.getAttribute('data-design-id');
+      const design = BBL.Designs.get(id);
+      if (!design) return;
+      row.querySelector('[data-design-open]').addEventListener('click', () => {
+        BBL.ui.closeModal();
+        this.confirm('打开存档「' + design.name + '」？', '当前画布会被这份存档替换；自动保存也会更新。', () => this.loadDesign(design));
+      });
+      row.querySelector('[data-design-rename]').addEventListener('click', () => {
+        this.promptDesignRename(design);
+      });
+      row.querySelector('[data-design-delete]').addEventListener('click', () => {
+        this.confirm('删除存档「' + design.name + '」？', '删除后无法从本地恢复；建议先导出 JSON 备份。', () => {
+          BBL.Designs.remove(id);
+          BBL.ui.closeModal();
+          this.openDesigns();
+          this.toast('已删除存档');
+        });
+      });
+      row.querySelector('[data-design-export]').addEventListener('click', () => {
+        const payload = { app: 'Breadboard Lab', kind: 'design', name: design.name, savedAt: new Date(design.updatedAt).toISOString(), scene: design.scene };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (design.name || 'design').replace(/[\\/:*?"<>|]/g, '-') + '.json';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+    });
+  };
+
+  Editor.prototype.promptDesignRename = function (design) {
+    const modal = BBL.ui.modal({
+      title: '重命名存档',
+      body: '<label class="design-rename-label">新名称<input id="design-rename-input" class="design-name-input" maxlength="60" value="' + esc(design.name) + '"></label>',
+      footer: '<button class="btn" data-close>取消</button><button class="btn primary" data-rename-save>保存名称</button>'
+    });
+    const apply = () => {
+      const name = modal.querySelector('#design-rename-input').value.trim();
+      if (!name) { this.toast('名称不能为空', 'warn'); return; }
+      BBL.Designs.update(design.id, { name: name });
+      BBL.ui.closeModal();
+      this.openDesigns();
+      this.toast('已重命名');
+    };
+    modal.querySelector('[data-rename-save]').addEventListener('click', apply);
+    modal.querySelector('#design-rename-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') apply(); });
+    setTimeout(() => { const input = modal.querySelector('#design-rename-input'); if (input) { input.focus(); input.select(); } }, 30);
+  };
+
+  Editor.prototype.loadDesign = function (design) {
+    this.stopSimulation();
+    this.scene = E.clone(design.scene);
+    this.scene._holes = E.boardHoles(this.scene.board);
+    this.scene.name = design.name;
+    this.selection = null;
+    this.pending = null;
+    this.taskDoneShown = false;
+    this.currentDesignId = design.id;
+    this.setTaskForTemplate(this.scene.template);
+    this.history = [this.serialize()];
+    this.hIndex = 0;
+    this.updateHistoryButtons();
+    this.renderBoard(true);
+    this.renderScene();
+    this.renderInspector();
+    this.renderLibrary();
+    this.renderTask();
+    this.fitView(false);
+    this.$name.value = design.name;
+    this.autosaveNow();
+    this.toast('已打开存档「' + design.name + '」', 'success');
+  };
+
 
   Editor.prototype.exportScene = function () {
     const data = this.serialize();
