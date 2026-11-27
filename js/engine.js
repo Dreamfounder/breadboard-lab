@@ -21,15 +21,87 @@
     ic74hc02: { label: '74HC02', sub: 'QUAD NOR', op: 'NOR', gates: [{ a: 2, b: 3, y: 1 }, { a: 5, b: 6, y: 4 }, { a: 8, b: 9, y: 10 }, { a: 11, b: 12, y: 13 }] },
     ic74hc04: { label: '74HC04', sub: 'HEX NOT', op: 'NOT', gates: [{ a: 1, y: 2 }, { a: 3, y: 4 }, { a: 5, y: 6 }, { a: 9, y: 8 }, { a: 11, y: 10 }, { a: 13, y: 12 }] },
     ic74hc20: { label: '74HC20', sub: 'DUAL 4-INPUT NAND', op: 'NAND4', gates: [{ a: 1, b: 2, c: 4, d: 5, y: 6 }, { a: 13, b: 12, c: 10, d: 9, y: 8 }] },
-    ic74hc21: { label: '74HC21', sub: 'DUAL 4-INPUT AND', op: 'AND4', gates: [{ a: 1, b: 2, c: 4, d: 5, y: 6 }, { a: 13, b: 12, c: 10, d: 9, y: 8 }] }
+    ic74hc21: { label: '74HC21', sub: 'DUAL 4-INPUT AND', op: 'AND4', gates: [{ a: 1, b: 2, c: 4, d: 5, y: 6 }, { a: 13, b: 12, c: 10, d: 9, y: 8 }] },
+    ic74hc00: { label: '74HC00', sub: 'QUAD 2-INPUT NAND', op: 'NAND', gates: [{ a: 1, b: 2, y: 3 }, { a: 4, b: 5, y: 6 }, { a: 9, b: 10, y: 8 }, { a: 12, b: 13, y: 11 }] }
   };
 
-  function icPins() {
+  const SPECIAL_ICS = {
+    ic74hc283: {
+      label: '74HC283', sub: '4-BIT FULL ADDER', vcc: 16, gnd: 8,
+      outputs: ['4', '1', '13', '10', '9'],
+      eval: function (lv) {
+        const a = lv(5) + lv(3) * 2 + lv(14) * 4 + lv(12) * 8;
+        const b = lv(6) + lv(2) * 2 + lv(15) * 4 + lv(11) * 8;
+        const v = a + b + lv(7);
+        return { 4: v & 1, 1: (v >> 1) & 1, 13: (v >> 2) & 1, 10: (v >> 3) & 1, 9: v > 15 ? 1 : 0 };
+      }
+    },
+    ic74hc157: {
+      label: '74HC157', sub: 'QUAD 2:1 MUX', vcc: 16, gnd: 8,
+      outputs: ['4', '7', '9', '12'],
+      eval: function (lv) {
+        const sel = lv(1), en = lv(15);
+        const pick = (a, b) => en ? 0 : (sel ? b : a);
+        return { 4: pick(lv(2), lv(3)), 7: pick(lv(5), lv(6)), 9: pick(lv(11), lv(10)), 12: pick(lv(14), lv(13)) };
+      }
+    },
+    ic74hc138: {
+      label: '74HC138', sub: '3-TO-8 DECODER', vcc: 16, gnd: 8,
+      outputs: ['15', '14', '13', '12', '11', '10', '9', '7'],
+      eval: function (lv) {
+        const enabled = lv(6) && !lv(4) && !lv(5);
+        const n = lv(1) + lv(2) * 2 + lv(3) * 4;
+        const pins = ['15', '14', '13', '12', '11', '10', '9', '7'];
+        const out = {};
+        pins.forEach((pin, i) => { out[pin] = (enabled && i === n) ? 0 : 1; });
+        return out;
+      }
+    },
+    ic74hc85: {
+      label: '74HC85', sub: '4-BIT COMPARATOR', vcc: 16, gnd: 8,
+      outputs: ['5', '6', '7'],
+      eval: function (lv) {
+        const a = lv(15) * 8 + lv(14) * 4 + lv(12) * 2 + lv(10);
+        const b = lv(1) * 8 + lv(13) * 4 + lv(11) * 2 + lv(9);
+        return { 5: a > b ? 1 : 0, 6: a === b ? 1 : 0, 7: a < b ? 1 : 0 };
+      }
+    },
+    ic74hc74: {
+      label: '74HC74', sub: 'DUAL D FLIP-FLOP', vcc: 14, gnd: 7,
+      outputs: ['5', '6', '9', '8'],
+      sequential: true,
+      eval: function (lv, comp) {
+        const p = comp.props;
+        if (p._q1 == null) p._q1 = 0;
+        if (p._q2 == null) p._q2 = 0;
+        if (p._clk1 == null) p._clk1 = 0;
+        if (p._clk2 == null) p._clk2 = 0;
+        const clk1 = lv(3), clk2 = lv(11);
+        if (!lv(1)) p._q1 = 0;
+        else if (!lv(4)) p._q1 = 1;
+        else if (clk1 && !p._clk1) p._q1 = lv(2);
+        if (!lv(13)) p._q2 = 0;
+        else if (!lv(10)) p._q2 = 1;
+        else if (clk2 && !p._clk2) p._q2 = lv(12);
+        p._clk1 = clk1; p._clk2 = clk2;
+        return { 5: p._q1, 6: p._q1 ? 0 : 1, 9: p._q2, 8: p._q2 ? 0 : 1 };
+      }
+    }
+  };
+
+  function icPinsN(n) {
     const pins = [];
-    for (let i = 1; i <= 7; i++) pins.push({ id: String(i), x: (i - 4) * PITCH, y: 14, side: 'bottom' });
-    for (let i = 8; i <= 14; i++) pins.push({ id: String(i), x: (11 - i) * PITCH, y: -14, side: 'top' });
+    const half = n / 2;
+    for (let i = 1; i <= half; i++) pins.push({ id: String(i), x: (i - (half + 1) / 2) * PITCH, y: 14, side: 'bottom' });
+    for (let i = half + 1; i <= n; i++) {
+      const k = n - i;
+      pins.push({ id: String(i), x: (k - (half - 1) / 2) * PITCH, y: -14, side: 'top' });
+    }
     return pins;
   }
+
+  function icPins() { return icPinsN(14); }
+  function icPins16() { return icPinsN(16); }
 
   const DEFS = {
     resistor: { name: '电阻', pins: [{ id: '1', x: -26, y: 0 }, { id: '2', x: 26, y: 0 }], props: { resistance: 220 }, bounds: { x: -31, y: -19, w: 62, h: 23 } },
@@ -50,6 +122,12 @@
     ic74hc02: { name: '74HC02', pins: icPins(), props: { label: '74HC02', sub: 'QUAD 2-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
     ic74hc20: { name: '74HC20', pins: icPins(), props: { label: '74HC20', sub: 'DUAL 4-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
     ic74hc21: { name: '74HC21', pins: icPins(), props: { label: '74HC21', sub: 'DUAL 4-INPUT' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
+    ic74hc00: { name: '74HC00', pins: icPins(), props: { label: '74HC00', sub: 'QUAD 2-INPUT NAND' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
+    ic74hc74: { name: '74HC74', pins: icPins(), props: { label: '74HC74', sub: 'DUAL D FLIP-FLOP' }, bounds: { x: -49, y: -21, w: 98, h: 42 } },
+    ic74hc283: { name: '74HC283', pins: icPins16(), props: { label: '74HC283', sub: '4-BIT ADDER' }, bounds: { x: -60, y: -21, w: 120, h: 42 } },
+    ic74hc157: { name: '74HC157', pins: icPins16(), props: { label: '74HC157', sub: 'QUAD 2:1 MUX' }, bounds: { x: -60, y: -21, w: 120, h: 42 } },
+    ic74hc138: { name: '74HC138', pins: icPins16(), props: { label: '74HC138', sub: '3-TO-8 DECODER' }, bounds: { x: -60, y: -21, w: 120, h: 42 } },
+    ic74hc85: { name: '74HC85', pins: icPins16(), props: { label: '74HC85', sub: '4-BIT COMPARATOR' }, bounds: { x: -60, y: -21, w: 120, h: 42 } },
     'arduino-uno': { name: 'Arduino Uno', pins: [{ id: '5v', x: 30, y: 34 }, { id: 'gnd', x: 18, y: 34 }, { id: 'd13', x: 6, y: 34 }, { id: 'd9', x: -6, y: 34 }, { id: 'd2', x: -18, y: 34 }, { id: 'a0', x: -30, y: 34 }], props: {}, bounds: { x: -56, y: -33, w: 112, h: 71 } },
     microbit: { name: 'micro:bit', pins: [{ id: '3v', x: -12, y: 32 }, { id: 'gnd', x: 0, y: 32 }, { id: 'p0', x: 12, y: 32 }], props: {}, bounds: { x: -35, y: -31, w: 70, h: 66 } },
     'dc-motor': { name: '直流电机', pins: [{ id: '1', x: -13, y: 0 }, { id: '2', x: 13, y: 0 }], props: {}, bounds: { x: -21, y: -33, w: 42, h: 37 } },
@@ -83,7 +161,13 @@
     ic74hc04: { 1: '1A', 2: '1Y', 3: '2A', 4: '2Y', 5: '3A', 6: '3Y', 7: 'GND', 8: '4Y', 9: '4A', 10: '5Y', 11: '5A', 12: '6Y', 13: '6A', 14: 'VCC' },
     ic74hc02: { 1: '1Y', 2: '1A', 3: '1B', 4: '2Y', 5: '2A', 6: '2B', 7: 'GND', 8: '3A', 9: '3B', 10: '3Y', 11: '4A', 12: '4B', 13: '4Y', 14: 'VCC' },
     ic74hc20: { 1: '1A', 2: '1B', 3: 'NC', 4: '1C', 5: '1D', 6: '1Y', 7: 'GND', 8: '2Y', 9: '2D', 10: '2C', 11: 'NC', 12: '2B', 13: '2A', 14: 'VCC' },
-    ic74hc21: { 1: '1A', 2: '1B', 3: 'NC', 4: '1C', 5: '1D', 6: '1Y', 7: 'GND', 8: '2Y', 9: '2D', 10: '2C', 11: 'NC', 12: '2B', 13: '2A', 14: 'VCC' }
+    ic74hc21: { 1: '1A', 2: '1B', 3: 'NC', 4: '1C', 5: '1D', 6: '1Y', 7: 'GND', 8: '2Y', 9: '2D', 10: '2C', 11: 'NC', 12: '2B', 13: '2A', 14: 'VCC' },
+    ic74hc00: { 1: '1A', 2: '1B', 3: '1Y', 4: '2A', 5: '2B', 6: '2Y', 7: 'GND', 8: '3Y', 9: '3A', 10: '3B', 11: '4Y', 12: '4A', 13: '4B', 14: 'VCC' },
+    ic74hc74: { 1: '1CLR', 2: '1D', 3: '1CLK', 4: '1PRE', 5: '1Q', 6: '1Q̅', 7: 'GND', 8: '2Q̅', 9: '2Q', 10: '2PRE', 11: '2CLK', 12: '2D', 13: '2CLR', 14: 'VCC' },
+    ic74hc283: { 1: 'S2', 2: 'B2', 3: 'A2', 4: 'S1', 5: 'A1', 6: 'B1', 7: 'C0', 8: 'GND', 9: 'C4', 10: 'S4', 11: 'B4', 12: 'A4', 13: 'S3', 14: 'A3', 15: 'B3', 16: 'VCC' },
+    ic74hc157: { 1: 'S', 2: '1A', 3: '1B', 4: '1Y', 5: '2A', 6: '2B', 7: '2Y', 8: 'GND', 9: '3Y', 10: '3B', 11: '3A', 12: '4Y', 13: '4B', 14: '4A', 15: 'E̅', 16: 'VCC' },
+    ic74hc138: { 1: 'A', 2: 'B', 3: 'C', 4: 'G2A̅', 5: 'G2B̅', 6: 'G1', 7: 'Y7̅', 8: 'GND', 9: 'Y6̅', 10: 'Y5̅', 11: 'Y4̅', 12: 'Y3̅', 13: 'Y2̅', 14: 'Y1̅', 15: 'Y0̅', 16: 'VCC' },
+    ic74hc85: { 1: 'B3', 2: 'IA<B', 3: 'IA=B', 4: 'IA>B', 5: 'OA>B', 6: 'OA=B', 7: 'OA<B', 8: 'GND', 9: 'B0', 10: 'A0', 11: 'B1', 12: 'A1', 13: 'B2', 14: 'A2', 15: 'A3', 16: 'VCC' }
   };
 
   const SOURCE_TYPES = {
@@ -665,6 +749,97 @@
     return s;
   };
 
+  function coScene(name, template) {
+    const s = baseScene(name);
+    s.template = template;
+    const psu = createComponent('power-supply', 24, 480, { voltage: 5 });
+    psu.id = 'psu1';
+    s.components.push(psu);
+    return s;
+  }
+
+  Templates['co-adder'] = function () {
+    const s = coScene('计算机组成 · 4 位加法器', 'co-adder');
+    const ic = createComponent('ic74hc283', 477, 428); ic.id = 'ic1'; s.components.push(ic);
+    for (let i = 0; i < 4; i++) {
+      const a = createComponent('slide-switch', 110 + i * 80, 110, { position: 1, label: 'A' + i }); a.id = 'swA' + i; s.components.push(a);
+      const b = createComponent('slide-switch', 110 + i * 80, 185, { position: 1, label: 'B' + i }); b.id = 'swB' + i; s.components.push(b);
+    }
+    for (let i = 0; i < 5; i++) {
+      const r = createComponent('resistor', 550 + i * 72, 455, { resistance: 1000 }); r.id = 'r' + i; s.components.push(r);
+      const led = createComponent('led', 600 + i * 72, 442, { color: i === 4 ? 'red' : 'green' }); led.id = 'led' + i; s.components.push(led);
+    }
+    s.wires = [];
+    return s;
+  };
+
+  Templates['co-decoder'] = function () {
+    const s = coScene('计算机组成 · 3-8 译码器', 'co-decoder');
+    const ic = createComponent('ic74hc138', 477, 428); ic.id = 'ic1'; s.components.push(ic);
+    ['A', 'B', 'C'].forEach((label, i) => {
+      const sw = createComponent('slide-switch', 160 + i * 90, 120, { position: 1, label: label });
+      sw.id = 'sw' + label; s.components.push(sw);
+    });
+    for (let i = 0; i < 8; i++) {
+      const r = createComponent('resistor', 500 + i * 48, 455, { resistance: 1000 }); r.id = 'r' + i; s.components.push(r);
+      const led = createComponent('led', 535 + i * 48, 442, { color: 'green' }); led.id = 'led' + i; s.components.push(led);
+    }
+    s.wires = [];
+    return s;
+  };
+
+  Templates['co-dff'] = function () {
+    const s = coScene('计算机组成 · D 触发器', 'co-dff');
+    const ic = createComponent('ic74hc74', 477, 428); ic.id = 'ic1'; s.components.push(ic);
+    const d = createComponent('slide-switch', 180, 180, { position: 1, label: 'D' }); d.id = 'swD'; s.components.push(d);
+    const clk = createComponent('slide-switch', 300, 180, { position: 1, label: 'CLK' }); clk.id = 'swCLK'; s.components.push(clk);
+    [['rQ', 'ledQ', 'green', 560], ['rQb', 'ledQb', 'yellow', 700]].forEach((x) => {
+      const r = createComponent('resistor', x[3], 455, { resistance: 1000 }); r.id = x[0]; s.components.push(r);
+      const led = createComponent('led', x[3] + 50, 442, { color: x[2] }); led.id = x[1]; s.components.push(led);
+    });
+    s.wires = [];
+    return s;
+  };
+
+  Templates['co-nand'] = function () {
+    const s = coScene('计算机组成 · NAND 基本门', 'co-nand');
+    const ic = createComponent('ic74hc00', 477, 428); ic.id = 'ic1'; s.components.push(ic);
+    const a = createComponent('slide-switch', 165, 362, { position: 1, label: 'A' }); a.id = 'swA'; s.components.push(a);
+    const b = createComponent('slide-switch', 256, 388, { position: 1, label: 'B' }); b.id = 'swB'; s.components.push(b);
+    const r = createComponent('resistor', 568, 455, { resistance: 1000 }); r.id = 'r1'; s.components.push(r);
+    const led = createComponent('led', 659, 442, { color: 'red' }); led.id = 'led1'; s.components.push(led);
+    s.wires = [];
+    return s;
+  };
+
+  Templates['co-mux'] = function () {
+    const s = coScene('计算机组成 · 2 选 1 数据选择器', 'co-mux');
+    const ic = createComponent('ic74hc157', 477, 428); ic.id = 'ic1'; s.components.push(ic);
+    const a = createComponent('slide-switch', 120, 180, { position: 1, label: 'A' }); a.id = 'swA'; s.components.push(a);
+    const b = createComponent('slide-switch', 240, 180, { position: 1, label: 'B' }); b.id = 'swB'; s.components.push(b);
+    const sel = createComponent('slide-switch', 360, 180, { position: 1, label: 'S' }); sel.id = 'swS'; s.components.push(sel);
+    const r = createComponent('resistor', 568, 455, { resistance: 1000 }); r.id = 'r1'; s.components.push(r);
+    const led = createComponent('led', 659, 442, { color: 'green' }); led.id = 'led1'; s.components.push(led);
+    s.wires = [];
+    return s;
+  };
+
+  Templates['co-compare'] = function () {
+    const s = coScene('计算机组成 · 4 位比较器', 'co-compare');
+    const ic = createComponent('ic74hc85', 477, 428); ic.id = 'ic1'; s.components.push(ic);
+    for (let i = 0; i < 4; i++) {
+      const a = createComponent('slide-switch', 110 + i * 80, 110, { position: 1, label: 'A' + i }); a.id = 'swA' + i; s.components.push(a);
+      const b = createComponent('slide-switch', 110 + i * 80, 185, { position: 1, label: 'B' + i }); b.id = 'swB' + i; s.components.push(b);
+    }
+    [['rGT', 'ledGT', 'green', 540], ['rEQ', 'ledEQ', 'yellow', 650], ['rLT', 'ledLT', 'red', 760]].forEach((x) => {
+      const r = createComponent('resistor', x[3], 455, { resistance: 1000 }); r.id = x[0]; s.components.push(r);
+      const led = createComponent('led', x[3] + 50, 442, { color: x[2] }); led.id = x[1]; s.components.push(led);
+    });
+    s.wires = [];
+    return s;
+  };
+
+
   function getTemplate(id, opts) {
     const fn = Templates[id] || Templates['led-basic'];
     uidCounter = 1;
@@ -921,15 +1096,19 @@
     const ics = [];
     comps.forEach(function (comp) {
       const info = IC_GATES[comp.type];
-      if (!info) return;
+      const special = SPECIAL_ICS[comp.type];
+      if (!info && !special) return;
       const pn = pinNet[comp.id];
-      const gateStates = info.gates.map(function (g) {
+      const gateStates = info ? info.gates.map(function (g) {
         return { a: g.a, b: g.b, c: g.c, d: g.d, y: g.y, out: false, powered: false, desired: 0, active: false };
-      });
+      }) : [];
+      const outputs = special ? special.outputs.map(function (pin) {
+        return { pin: pin, out: false, active: false };
+      }) : [];
       const hasWire = (scene.wires || []).some(function (w) {
         return (w.a.kind === 'pin' && w.a.comp === comp.id) || (w.b.kind === 'pin' && w.b.comp === comp.id);
       });
-      ics.push({ comp: comp, info: info, pn: pn, gates: gateStates, hasWire: hasWire, powered: false, vcc: 0, gnd: 0, outV: 0, outGnd: 0 });
+      ics.push({ comp: comp, info: info, special: special || null, pn: pn, gates: gateStates, outputs: outputs, hasWire: hasWire, powered: false, vcc: 0, gnd: 0, outV: 0, outGnd: 0 });
     });
 
     const maxSourceV = sources.reduce(function (m, s) { return Math.max(m, s.V); }, 0);
@@ -982,6 +1161,14 @@
       // IC outputs
       ics.forEach(function (ic) {
         if (!ic.powered) return;
+        if (ic.special) {
+          const gndNet = ic.pn[String(ic.special.gnd)];
+          ic.outputs.forEach(function (o) {
+            if (!o.active) return;
+            vSource(ic.pn[o.pin], gndNet, o.out ? ic.outV : ic.outGnd, 40);
+          });
+          return;
+        }
         ic.gates.forEach(function (g) {
           if (!g.active) return;
           const outNet = ic.pn[g.y];
@@ -1040,8 +1227,10 @@
       // ICs
       ics.forEach(function (ic) {
         const pn = ic.pn;
-        const gnd = volts[pn['7']] || 0;
-        const vcc = volts[pn['14']] || 0;
+        const vccPin = ic.special ? String(ic.special.vcc) : '14';
+        const gndPin = ic.special ? String(ic.special.gnd) : '7';
+        const gnd = volts[pn[gndPin]] || 0;
+        const vcc = volts[pn[vccPin]] || 0;
         ic.vcc = vcc; ic.gnd = gnd;
         const supply = vcc - gnd;
         const powered = supply > 1.8;
@@ -1050,6 +1239,15 @@
         ic.outV = vcc - 0.08;
         ic.outGnd = gnd + 0.04;
         const highLevel = supply * 0.5 + gnd;
+        if (ic.special) {
+          const lv = (pin) => (volts[pn[String(pin)]] || 0) > highLevel ? 1 : 0;
+          const next = ic.special.eval(lv, ic.comp);
+          ic.outputs.forEach(function (o) {
+            const out = next[o.pin] ? 1 : 0;
+            if (o.out !== !!out || !o.active) { o.out = !!out; o.active = true; changed = true; }
+          });
+          return;
+        }
         ic.gates.forEach(function (g) {
           const va = volts[pn[g.a]];
           const vb = g.b != null ? volts[pn[g.b]] : null;
@@ -1065,6 +1263,7 @@
             case 'OR': out = a | b; break;
             case 'XOR': out = a ^ b; break;
             case 'NOR': out = (a | b) ? 0 : 1; break;
+            case 'NAND': out = (a & b) ? 0 : 1; break;
             case 'NOT': out = a ? 0 : 1; break;
             case 'AND4': out = (a & b & c & d) ? 1 : 0; break;
             case 'NAND4': out = (a & b & c & d) ? 0 : 1; break;
@@ -1169,10 +1368,14 @@
       const pn = ic.pn;
       const cr = componentResult[ic.comp.id];
       cr.gates = ic.gates.map(function (g) { return { a: g.a, b: g.b, c: g.c, d: g.d, y: g.y, out: g.out, active: g.active }; });
+      cr.outputs = ic.outputs.map(function (o) { return { pin: o.pin, out: o.out, active: o.active }; });
       cr.powered = ic.powered;
       cr.vcc = ic.vcc; cr.gnd = ic.gnd;
+      const icLabel = ic.info ? ic.info.label : (ic.special ? ic.special.label : ic.comp.type);
       if (!ic.powered && ic.hasWire) {
-        warnings.push({ code: 'ic-unpowered', level: 'warn', compId: ic.comp.id, message: ic.info.label + ' 还没接电源（VCC 第 14 脚、GND 第 7 脚）。' });
+        const vp = ic.special ? ic.special.vcc : 14;
+        const gp = ic.special ? ic.special.gnd : 7;
+        warnings.push({ code: 'ic-unpowered', level: 'warn', compId: ic.comp.id, message: icLabel + ' 还没接电源（VCC 第 ' + vp + ' 脚、GND 第 ' + gp + ' 脚）。' });
       }
       if (ic.powered) {
         let floating = 0;
@@ -1502,6 +1705,60 @@
         { key: 'lab-correct', text: '运行仿真，自己验证八组输入并填完真值表' }
       ],
       success: '终验完成。空画布上的全加器已经能工作，这就是 Lab 02 的最终交付电路。'
+    },
+    'co-adder': {
+      kicker: '计算机组成 · 算术', title: '4 位加法器', summary: '用 74HC283 把两个 4 位二进制数相加。',
+      steps: [
+        { key: 'co-power', text: '给 74HC283 接 VCC（16）和 GND（8）' },
+        { key: 'co-wired', text: '把 A0–A3、B0–B3 接到 8 个开关，C0 接 GND' },
+        { key: 'co-correct', text: '运行仿真，检查几组 A+B 的 Sum 和 C4 是否正确' }
+      ],
+      success: '4 位加法器工作正常。C4 为 1 表示和超过 15。'
+    },
+    'co-decoder': {
+      kicker: '计算机组成 · 控制', title: '3-8 译码器', summary: '用 74HC138 把 3 位地址译成 8 根片选线。',
+      steps: [
+        { key: 'co-power', text: '给 74HC138 接 VCC（16）和 GND（8）' },
+        { key: 'co-wired', text: 'A/B/C 接 3 个开关，G1 接高，G2A/G2B 接低' },
+        { key: 'co-correct', text: '运行仿真，确认每个地址只选中一根输出线' }
+      ],
+      success: '译码器工作正常：每个地址只让一个 Y 输出变低。'
+    },
+    'co-dff': {
+      kicker: '计算机组成 · 时序', title: 'D 触发器', summary: '用 74HC74 在时钟上升沿记住一位数据。',
+      steps: [
+        { key: 'co-power', text: '给 74HC74 接 VCC（14）和 GND（7）' },
+        { key: 'co-wired', text: 'D、CLK 接开关，Q 接电阻和 LED；CLR/PRE 接高' },
+        { key: 'co-correct', text: '运行仿真，切换 D 和 CLK，验证上升沿记忆' }
+      ],
+      success: 'D 触发器工作正常：只有 CLK 从 0 变 1 时，Q 才记录 D。'
+    },
+    'co-nand': {
+      kicker: '计算机组成 · 基本门', title: 'NAND 门', summary: '用 74HC00 验证“两个都为 1 才输出 0”。',
+      steps: [
+        { key: 'co-power', text: '给 74HC00 接 VCC（14）和 GND（7）' },
+        { key: 'co-wired', text: 'A/B 接两个开关，1Y 接电阻和 LED' },
+        { key: 'co-correct', text: '运行仿真，验证 NAND 的四种输入组合' }
+      ],
+      success: 'NAND 门工作正常；它是搭 SR 锁存器和所有基本门的积木。'
+    },
+    'co-mux': {
+      kicker: '计算机组成 · 数据通路', title: '2 选 1 选择器', summary: '用 74HC157 在 A/B 两条数据线中选一条。',
+      steps: [
+        { key: 'co-power', text: '给 74HC157 接 VCC（16）和 GND（8），E̅ 接低' },
+        { key: 'co-wired', text: '1A、1B、S 接三个开关，1Y 接 LED' },
+        { key: 'co-correct', text: '运行仿真，验证 S=0 选 A、S=1 选 B' }
+      ],
+      success: '选择器工作正常：S 决定输出跟随 A 还是 B。'
+    },
+    'co-compare': {
+      kicker: '计算机组成 · ALU 标志', title: '4 位比较器', summary: '用 74HC85 判断两个 4 位数的大小。',
+      steps: [
+        { key: 'co-power', text: '给 74HC85 接 VCC（16）和 GND（8）' },
+        { key: 'co-wired', text: 'A/B 各接 4 个开关，级联输入接 0/1/0' },
+        { key: 'co-correct', text: '运行仿真，验证 A>B、A=B、A<B 三种结果' }
+      ],
+      success: '比较器工作正常：三根输出线同一时刻只有一根为高。'
     }
   };
 

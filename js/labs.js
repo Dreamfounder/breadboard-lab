@@ -25,6 +25,17 @@
       color: 'green',
       intro: '这份 Lab 要你用几种逻辑芯片拼出“加法器”：先让两个一位数相加，再让三个一位数相加。先看参考电路自己接线，最后在空白面包板上独立搭出完整全加器。',
       goals: ['明白“个位”和“进位”是什么', '用“不同才通过”和“都同意才通过”拼出半加器', '把两个半加器接成一个全加器', '自己填完输入输出表', '从空白画布独立搭出全加器']
+    },
+    {
+      id: 'co',
+      label: '计算机组成',
+      title: 'Computer Organization',
+      cn: '计算机组成原理',
+      course: 'Computer Organization',
+      source: 'ALU / Datapath / Control / State',
+      color: 'green',
+      intro: '这一组只讲计算机组成原理真正会用到的芯片：加法器、数据选择器、译码器、比较器和 D 触发器。不加传感器、电机、NeoPixel 这些无关元件。',
+      goals: ['用 74HC283 做 4 位加法', '用 74HC138 做地址译码', '用 74HC74 记住一位状态', '理解 ALU、数据通路和控制信号的基本积木']
     }
   ];
 
@@ -493,6 +504,146 @@
       ],
       checkpoints: ['三片 IC 都已放置并通电', '三个输入开关都接好', 'Sum 与 Cout 各有独立输出', '八行真值表自己填写并检查'],
       submit: '提交完整全加器电路图、八行真值表和最终截图。这一关的电路就是 Lab 02 的最终交付。'
+    },
+    {
+      id: 'co-adder', track: 'co', number: '01', title: '4 位加法器', en: '4-Bit Adder',
+      minutes: 20, difficulty: '组合逻辑',
+      template: 'co-adder', taskId: 'co-adder',
+      brief: '用 74HC283 把两个 4 位二进制数相加，观察 Sum 和 C4。',
+      objective: '理解 ALU 的算术核心：A/B 是加数，S 是和，C4 是向高位的进位。',
+      parts: ['power-supply', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'ic74hc283', 'resistor', 'resistor', 'resistor', 'resistor', 'resistor', 'led', 'led', 'led', 'led', 'led'],
+      plain: '把两个 4 位数相加，就像竖式加法：从最低位开始，有进位就送给下一位。74HC283 已经把这 4 位加法器装在一片芯片里。',
+      background: ['A0–A3 和 B0–B3 是两个加数，C0 是低位送来的进位，S0–S3 是和，C4 是加完以后向高位的进位。', '如果 C4=1，说明结果超过 15，需要再用一片 283 处理更高位。'],
+      steps: [
+        { title: '给芯片供电', body: '74HC283 的 VCC 是第 16 脚，GND 是第 8 脚。', why: '芯片没电，所有输出都没有意义。' },
+        { title: '接两个加数', body: 'A0–A3、B0–B3 各接一个开关；C0 接 GND。', why: '每个开关给出一位 0/1；C0 接 0 表示没有更低的进位。' },
+        { title: '接输出并验证', body: 'S0–S3、C4 接电阻和 LED，试 3+5、7+8、15+15。', why: '从简单到进位，才能确认每一位和 C4 都正确。' }
+      ],
+      wiring: [
+        { from: '电源 V+', to: '74HC283 第 16 脚', why: 'VCC' },
+        { from: '74HC283 第 8 脚', to: '电源 GND', why: 'GND' },
+        { from: '开关公共端', to: 'A0–A3、B0–B3', why: '8 位输入' }
+      ],
+      pitfalls: ['A/B 位序接反，和会变成另一个数。', 'C0 悬空，最低位的和不确定。', 'C4 忘记接 LED，看不到溢出。'],
+      checkpoints: ['16/8 脚通电', '8 个开关都接到对应输入', 'C0 接 GND', '至少验证 3+5 和 15+15'],
+      submit: '截图 Sum/C4 的结果，并写出 3+5 和 15+15 的二进制计算过程。'
+    },
+    {
+      id: 'co-decoder', track: 'co', number: '02', title: '3-8 译码器', en: '3-to-8 Decoder',
+      minutes: 20, difficulty: '控制逻辑',
+      template: 'co-decoder', taskId: 'co-decoder',
+      brief: '用 74HC138 把 3 位地址变成 8 根片选线。',
+      objective: '理解地址译码：一个地址只选中一个设备，输出低有效。',
+      parts: ['power-supply', 'slide-switch', 'slide-switch', 'slide-switch', 'ic74hc138', 'resistor', 'resistor', 'resistor', 'resistor', 'resistor', 'resistor', 'resistor', 'resistor', 'led', 'led', 'led', 'led', 'led', 'led', 'led', 'led'],
+      plain: '3 位地址就像门牌号：000 选 0 号，111 选 7 号。74HC138 把门牌号翻译成“哪一根线变低”。',
+      background: ['A/B/C 是 3 位地址，Y0–Y7 是 8 根输出。被选中的那根输出为 0，其余为 1。', 'G1 接高、G2A/G2B 接低时芯片才工作，这叫使能。'],
+      steps: [
+        { title: '接电源和使能', body: 'VCC 第 16 脚、GND 第 8 脚；G1 接高，G2A、G2B 接低。', why: '使能不对，8 根输出会全部保持高。' },
+        { title: '接地址', body: 'A、B、C 分别接三个开关，从 000 试到 111。', why: '三位二进制正好有 8 种组合。' },
+        { title: '接输出', body: 'Y0–Y7 各接一个 LED，观察每次只有一根变低。', why: '低有效输出用 LED 接法要正确，才能看出被选中的那一路。' }
+      ],
+      wiring: [
+        { from: '电源 V+', to: '第 16 脚', why: 'VCC' },
+        { from: '第 8 脚', to: '电源 GND', why: 'GND' },
+        { from: 'G1', to: 'V+', why: '高有效使能' },
+        { from: 'G2A / G2B', to: 'GND', why: '低有效使能' }
+      ],
+      pitfalls: ['把 G2A/G2B 接高，芯片一直不工作。', '把 Y 输出当成高有效。', 'A/B/C 位序接反。'],
+      checkpoints: ['使能端正确', '8 根输出都能被选中一次', '每次只有一根为低'],
+      submit: '截图 000、011、111 三个地址下的输出，并说明哪根线被选中。'
+    },
+    {
+      id: 'co-dff', track: 'co', number: '03', title: 'D 触发器', en: 'D Flip-Flop',
+      minutes: 20, difficulty: '时序逻辑',
+      template: 'co-dff', taskId: 'co-dff',
+      brief: '用 74HC74 在时钟上升沿记住一位 D。',
+      objective: '理解“状态”和“时钟边沿”：寄存器、计数器都从这里开始。',
+      parts: ['power-supply', 'slide-switch', 'slide-switch', 'ic74hc74', 'resistor', 'resistor', 'led', 'led'],
+      plain: 'D 触发器像一个只在时钟“咔哒”一下时才拍照的小盒子：上升沿那一刻 D 是多少，Q 就记住多少。',
+      background: ['74HC74 有两组独立的 D 触发器。CLR、PRE 是异步端，平时都接高。', 'CLK 从 0 变 1 时采样 D；之后 D 再变，Q 也不变。'],
+      steps: [
+        { title: '接电源和异步端', body: 'VCC 第 14 脚、GND 第 7 脚；CLR、PRE 接高。', why: '异步端拉低会强制 Q=0 或 1，正常实验要先放开。' },
+        { title: '接 D 和 CLK', body: 'D 接一个开关，CLK 接另一个开关。', why: '先让 D 稳定，再给上升沿，才能看清“记住”的效果。' },
+        { title: '接 Q 并验证', body: 'Q 接电阻和 LED；试 D=1 时给上升沿，再改 D 看 Q 是否保持。', why: '只有上升沿才更新，这正是触发器和锁存器的区别。' }
+      ],
+      wiring: [
+        { from: '第 14 脚', to: 'V+', why: 'VCC' },
+        { from: '第 7 脚', to: 'GND', why: 'GND' },
+        { from: 'CLR / PRE', to: 'V+', why: '平时不强制置位/清零' }
+      ],
+      pitfalls: ['CLR/PRE 悬空或接低，Q 被强制。', '把 D 当成了直接输出。', '没有给上升沿就期待 Q 变化。'],
+      checkpoints: ['CLR/PRE 接高', 'D、CLK 都能控制', '上升沿后 Q 记录 D', 'D 再变 Q 保持'],
+      submit: '画一个时钟波形，标出上升沿和对应的 Q，并截图验证。'
+    },
+    {
+      id: 'co-nand', track: 'co', number: '04', title: 'NAND 基本门', en: 'NAND Gate',
+      minutes: 12, difficulty: '基础门',
+      template: 'co-nand', taskId: 'co-nand',
+      brief: '用 74HC00 验证“两个都为 1 才输出 0”。',
+      objective: '认识 NAND 是万能门：NOT、AND、OR 和 SR 锁存器都能用它搭。',
+      parts: ['power-supply', 'slide-switch', 'slide-switch', 'ic74hc00', 'resistor', 'led'],
+      plain: 'NAND 就是“与门后面再加一个反相”：两个都同意时它反而输出 0，其余时候输出 1。',
+      background: ['NAND 真值表只有 11 输出 0，其余 00、01、10 都输出 1。', '把两个输入接在一起，NAND 就变成 NOT。'],
+      steps: [
+        { title: '给芯片供电', body: '74HC00 的 VCC 是第 14 脚，GND 是第 7 脚。', why: '芯片没电就没有输出。' },
+        { title: '接两个输入', body: '1A、1B 各接一个开关。', why: '两个开关给四种输入组合。' },
+        { title: '接输出并验证', body: '1Y 接电阻和 LED，试 00、01、10、11。', why: '确认只有 11 时灯灭。' }
+      ],
+      wiring: [
+        { from: '第 14 脚', to: 'V+', why: 'VCC' },
+        { from: '第 7 脚', to: 'GND', why: 'GND' },
+        { from: '1Y', to: '电阻', why: '输出' }
+      ],
+      pitfalls: ['把 NAND 当成 AND，忘记输出取反。', '输入悬空。', 'LED 方向接反。'],
+      checkpoints: ['14/7 脚通电', '两个输入都能切换', '11 时输出 0'],
+      submit: '截图 NAND 四种组合，并写出它的真值表。'
+    },
+    {
+      id: 'co-mux', track: 'co', number: '05', title: '2 选 1 选择器', en: '2-to-1 Multiplexer',
+      minutes: 15, difficulty: '数据通路',
+      template: 'co-mux', taskId: 'co-mux',
+      brief: '用 74HC157 在 A/B 两条数据线中选一条。',
+      objective: '理解数据选择器：S 是选择信号，输出跟随被选中的那一路。',
+      parts: ['power-supply', 'slide-switch', 'slide-switch', 'slide-switch', 'ic74hc157', 'resistor', 'led'],
+      plain: '2 选 1 就像岔路口：S=0 走 A 这条路，S=1 走 B 这条路。',
+      background: ['74HC157 有 4 路选择器；这一关只用第 1 路：1A、1B 输入，1Y 输出。', 'E̅ 是低有效使能，接低才工作。'],
+      steps: [
+        { title: '接电源和使能', body: 'VCC 第 16 脚、GND 第 8 脚，E̅ 接 GND。', why: '使能端为高时输出会被关掉。' },
+        { title: '接两路数据', body: '1A 接一个开关，1B 接另一个开关。', why: '两条路要有不同的 0/1 才能看出选择效果。' },
+        { title: '接选择端和输出', body: 'S 接第三个开关，1Y 接电阻和 LED。', why: '切换 S，输出应在 A/B 之间切换。' }
+      ],
+      wiring: [
+        { from: '第 16 脚', to: 'V+', why: 'VCC' },
+        { from: '第 8 脚', to: 'GND', why: 'GND' },
+        { from: 'E̅（15）', to: 'GND', why: '低有效使能' }
+      ],
+      pitfalls: ['E̅ 悬空。', '把 1A/1B 接反。', 'S 没有接固定电平。'],
+      checkpoints: ['E̅ 接低', 'S=0 输出 A', 'S=1 输出 B'],
+      submit: '截图 S=0 和 S=1 两种状态，说明输出分别来自哪一路。'
+    },
+    {
+      id: 'co-compare', track: 'co', number: '06', title: '4 位比较器', en: '4-Bit Comparator',
+      minutes: 20, difficulty: 'ALU 标志',
+      template: 'co-compare', taskId: 'co-compare',
+      brief: '用 74HC85 判断两个 4 位数的大小。',
+      objective: '理解比较器如何产生 A>B、A=B、A<B 三个互斥结果。',
+      parts: ['power-supply', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'slide-switch', 'ic74hc85', 'resistor', 'resistor', 'resistor', 'led', 'led', 'led'],
+      plain: '比较器就是同时问三个问题：A 更大、一样大、还是更小？三根输出线只有一根会亮。',
+      background: ['A0–A3、B0–B3 是两个 4 位数，最高位权重最大。', '级联输入用于多片扩展；单独使用时接 A<B=0、A=B=1、A>B=0。'],
+      steps: [
+        { title: '接电源和级联输入', body: 'VCC 第 16 脚、GND 第 8 脚；2 接 0、3 接 1、4 接 0。', why: '级联输入不能悬空，否则比较结果不确定。' },
+        { title: '接两个数', body: 'A0–A3、B0–B3 各接开关。', why: '8 个开关给出两个 4 位数。' },
+        { title: '接三个结果', body: '5、6、7 脚分别接 LED。', why: '观察三根线是否互斥。' }
+      ],
+      wiring: [
+        { from: '第 16 脚', to: 'V+', why: 'VCC' },
+        { from: '第 8 脚', to: 'GND', why: 'GND' },
+        { from: '第 3 脚', to: 'V+', why: 'A=B 级联接高' },
+        { from: '第 2、4 脚', to: 'GND', why: 'A<B、A>B 级联接低' }
+      ],
+      pitfalls: ['级联输入悬空。', 'A/B 位序接反。', '三个输出同时亮说明输出冲突。'],
+      checkpoints: ['级联输入固定', 'A/B 都能设置', '三种结果互斥'],
+      submit: '截图 3<5、5=5、9>4 三种情况，并说明哪根输出为高。'
     }
   ];
 

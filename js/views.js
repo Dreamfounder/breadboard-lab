@@ -440,26 +440,29 @@
     const names = E.pinNamesFor(p.id);
     const def = E.DEFS[p.id];
     if (!def) return '';
-    if (E.IC_GATES[p.id]) {
+    if (p.id.indexOf('ic74hc') === 0) {
       const ids = Object.keys(names).map(Number).sort((a, b) => a - b);
-      const bottom = ids.filter((n) => n <= 7);
-      const top = ids.filter((n) => n > 7).sort((a, b) => b - a);
-      const x = (i) => 200 + i * 55;
-      const pinLine = (n, side) => {
-        const i = side === 'top' ? top.indexOf(n) : bottom.indexOf(n);
+      const n = ids.length;
+      const half = n / 2;
+      const bottom = ids.filter((x) => x <= half);
+      const top = ids.filter((x) => x > half).sort((a, b) => b - a);
+      const spacing = n > 14 ? 50 : 55;
+      const x = (i) => 380 - ((half - 1) / 2) * spacing + i * spacing;
+      const pinLine = (pin, side) => {
+        const i = side === 'top' ? top.indexOf(pin) : bottom.indexOf(pin);
         const px = x(i);
         const y1 = side === 'top' ? 45 : 205;
         const y2 = side === 'top' ? 75 : 235;
         const numY = side === 'top' ? 36 : 250;
         const nameY = side === 'top' ? 98 : 184;
-        const nm = names[n] || String(n);
+        const nm = names[pin] || String(pin);
         return '<g class="pin-node">' +
           '<line x1="' + px + '" y1="' + y1 + '" x2="' + px + '" y2="' + y2 + '"/>' +
-          '<text class="pin-num" x="' + px + '" y="' + numY + '" text-anchor="middle">' + n + '</text>' +
+          '<text class="pin-num" x="' + px + '" y="' + numY + '" text-anchor="middle">' + pin + '</text>' +
           '<text class="pin-name pn-' + pinKind(nm) + '" x="' + px + '" y="' + nameY + '" text-anchor="middle">' + esc(nm) + '</text>' +
           '</g>';
       };
-      const gates = (E.IC_GATES[p.id].gates || []).map((g, i) => {
+      const gates = (E.IC_GATES[p.id] ? (E.IC_GATES[p.id].gates || []) : []).map((g, i) => {
         const ins = [g.a, g.b, g.c, g.d].filter((n) => n != null).map((n) => names[n] || n).join(' + ');
         return '<span><b>门 ' + (i + 1) + '</b> ' + esc(ins) + ' → ' + esc(names[g.y] || g.y) + '</span>';
       }).join('');
@@ -468,12 +471,12 @@
         '<rect class="pinout-body" x="170" y="75" width="420" height="130" rx="10"/>' +
         '<path class="pinout-notch" d="M350 75 A30 30 0 0 0 410 75"/>' +
         '<text class="pinout-chip-name" x="380" y="140" text-anchor="middle">' + esc(p.name) + '</text>' +
-        '<text class="pinout-chip-sub" x="380" y="160" text-anchor="middle">' + esc(p.foot) + ' · DIP-14</text>' +
+        '<text class="pinout-chip-sub" x="380" y="160" text-anchor="middle">' + esc(p.foot) + ' · DIP-' + n + '</text>' +
         '<text class="pinout-foot" x="176" y="220" text-anchor="end">第 1 脚 ▶</text>' +
         bottom.map((n) => pinLine(n, 'bottom')).join('') +
         top.map((n) => pinLine(n, 'top')).join('') +
         '</svg>' +
-        '<figcaption>按面包板横放的方向画：下排从左到右是 1–7，上排从左到右是 14–8；芯片缺口朝上，左下角圆点是第 1 脚。</figcaption>' +
+        '<figcaption>按面包板横放的方向画：下排从左到右是 1–' + half + '，上排从左到右是 ' + n + '–' + (half + 1) + '；芯片缺口朝上，左下角圆点是第 1 脚。</figcaption>' +
         '<div class="pinout-legend"><span class="pn-in">输入</span><span class="pn-out">输出</span><span class="pn-pwr">VCC</span><span class="pn-gnd">GND</span><span class="pn-nc">NC 空脚</span></div>' +
         '<div class="pin-gates">' + gates + '</div>' +
         '</figure>';

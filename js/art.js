@@ -161,6 +161,12 @@
   icon.ic74hc02 = function () { return icIcon('74HC02', 'QUAD NOR'); };
   icon.ic74hc20 = function () { return icIcon('74HC20', 'DUAL 4-IN NAND'); };
   icon.ic74hc21 = function () { return icIcon('74HC21', 'DUAL 4-IN AND'); };
+  icon.ic74hc00 = function () { return icIcon('74HC00', 'QUAD NAND'); };
+  icon.ic74hc74 = function () { return icIcon('74HC74', 'DUAL D-FF'); };
+  icon.ic74hc283 = function () { return icIcon('74HC283', '4-BIT ADDER'); };
+  icon.ic74hc157 = function () { return icIcon('74HC157', 'QUAD 2:1 MUX'); };
+  icon.ic74hc138 = function () { return icIcon('74HC138', '3-TO-8 DECODER'); };
+  icon.ic74hc85 = function () { return icIcon('74HC85', '4-BIT COMPARE'); };
 
   icon['arduino-uno'] = function () {
     let headers = '';
@@ -401,8 +407,10 @@
   }
 
   function icArt(comp, pins) {
-    const w = 46, h = 12;
-    const half = 39;
+    const h = 12;
+    const n = pins.length || 14;
+    const half = n / 2;
+    const edge = Math.max.apply(null, pins.map(function (p) { return Math.abs(p.x); })) + 6;
     const top = -16, bottom = 16;
     let lines = '';
     pins.forEach(function (p) {
@@ -410,16 +418,16 @@
       lines += '<path d="M' + p.x + ' ' + py + 'V' + p.y + '" stroke="#9aa3ae" stroke-width="3" stroke-linecap="round"/>';
     });
     let nums = '';
-    [1, 2, 3, 4, 5, 6, 7].forEach(function (i, idx) {
-      nums += '<text x="' + (-39 + idx * 13) + '" y="' + (bottom + 7) + '" text-anchor="middle" font-family="monospace" font-size="3.1" fill="#8b949e">' + i + '</text>';
+    pins.slice(0, half).forEach(function (p, idx) {
+      nums += '<text x="' + p.x + '" y="' + (bottom + 7) + '" text-anchor="middle" font-family="monospace" font-size="3.1" fill="#8b949e">' + (idx + 1) + '</text>';
     });
-    [14, 13, 12, 11, 10, 9, 8].forEach(function (i, idx) {
-      nums += '<text x="' + (-39 + idx * 13) + '" y="' + (top + 2) + '" text-anchor="middle" font-family="monospace" font-size="3.1" fill="#8b949e">' + i + '</text>';
+    pins.slice(half).forEach(function (p, idx) {
+      nums += '<text x="' + p.x + '" y="' + (top + 2) + '" text-anchor="middle" font-family="monospace" font-size="3.1" fill="#8b949e">' + (n - idx) + '</text>';
     });
     return lines +
-      '<rect x="' + (-half - 6) + '" y="' + (-h) + '" width="' + (half * 2 + 12) + '" height="' + (h * 2) + '" rx="2" fill="url(#icBody)" stroke="#0b0e12" stroke-width=".8"/>' +
-      '<path d="M' + (-half - 2) + ' ' + (-h) + 'a6 6 0 0 1 0 12" fill="#0b0e12"/>' +
-      '<circle cx="' + (-half - 1) + '" cy="' + (h - 4) + '" r="1.5" fill="#5b6472"/>' +
+      '<rect x="' + (-edge) + '" y="' + (-h) + '" width="' + (edge * 2) + '" height="' + (h * 2) + '" rx="2" fill="url(#icBody)" stroke="#0b0e12" stroke-width=".8"/>' +
+      '<path d="M' + (-edge + 4) + ' ' + (-h) + 'a6 6 0 0 1 0 12" fill="#0b0e12"/>' +
+      '<circle cx="' + (-edge + 3) + '" cy="' + (h - 4) + '" r="1.5" fill="#5b6472"/>' +
       '<text x="0" y="1.5" text-anchor="middle" font-family="monospace" font-size="7.4" font-weight="700" fill="#f4f4f2">' + esc(comp.props.label || '74HC08') + '</text>' +
       '<text x="0" y="8" text-anchor="middle" font-family="monospace" font-size="3.3" fill="#8f969f">' + esc(comp.props.sub || 'QUAD 2-INPUT') + '</text>' +
       nums;
@@ -497,7 +505,8 @@
       case 'buzzer': return buzzerArt(comp, pins);
       case 'battery-9v': case 'coin-cell': case 'aa-battery': return batteryArt(comp, pins);
       case 'power-supply': return psuArt(comp, pins);
-      case 'ic74hc08': case 'ic74hc32': case 'ic74hc04': case 'ic74hc86': case 'ic74hc02': case 'ic74hc20': case 'ic74hc21': return icArt(comp, pins);
+      case 'ic74hc08': case 'ic74hc32': case 'ic74hc04': case 'ic74hc86': case 'ic74hc02': case 'ic74hc20': case 'ic74hc21':
+      case 'ic74hc00': case 'ic74hc74': case 'ic74hc283': case 'ic74hc157': case 'ic74hc138': case 'ic74hc85': return icArt(comp, pins);
       case 'arduino-uno': case 'microbit': return boardArt(comp, pins);
       case 'dc-motor': case 'servo': case 'vibration-motor': return motorArt(comp, pins);
       default: return '<circle r="8" fill="#94a3b8"/>';

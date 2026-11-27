@@ -63,6 +63,8 @@
 
   function pinName(comp, pinId) {
     if (IC_PIN_NAMES[comp.type]) return '第 ' + pinId + ' 脚 · ' + IC_PIN_NAMES[comp.type][pinId];
+    const names = BBL.Engine && BBL.Engine.pinNamesFor ? BBL.Engine.pinNamesFor(comp.type) : null;
+    if (names && names[pinId] != null) return '第 ' + pinId + ' 脚 · ' + names[pinId];
     return (PIN_NAMES[comp.type] && PIN_NAMES[comp.type][pinId]) || '引脚 ' + pinId;
   }
 
@@ -2464,6 +2466,84 @@
     return { ok: false, total: total, wrong: total, anyOn: false, hint: '电路还没有形成可用的输出，先检查电源和输出路径。' };
   };
 
+  Editor.prototype.verifyCoLab = function () {
+    const id = this.labId;
+    const s = E.clone(this.scene);
+    const sw = (name, bit) => {
+      const c = s.components.find((x) => x.id === name);
+      if (c) c.props.position = bit ? 0 : 1;
+    };
+    const pin = (r, n) => {
+      const p = r.pins.ic1 && r.pins.ic1[String(n)];
+      return p && p.voltage > 1.5 ? 1 : 0;
+    };
+    if (id === 'co-adder') {
+      const cases = [[0, 0], [3, 5], [7, 8], [15, 15]];
+      for (const [a, b] of cases) {
+        for (let i = 0; i < 4; i++) { sw('swA' + i, (a >> i) & 1); sw('swB' + i, (b >> i) & 1); }
+        const r = E.simulate(s);
+        const v = a + b;
+        const got = pin(r, 4) + pin(r, 1) * 2 + pin(r, 13) * 4 + pin(r, 10) * 8;
+        if (got !== (v & 15) || pin(r, 9) !== (v > 15 ? 1 : 0)) return { ok: false, hint: '加法结果不对：检查 A/B 的位序、C0 是否接 GND。' };
+      }
+      return { ok: true };
+    }
+    if (id === 'co-decoder') {
+      for (let n = 0; n < 8; n++) {
+        sw('swA', n & 1); sw('swB', (n >> 1) & 1); sw('swC', (n >> 2) & 1);
+        const r = E.simulate(s);
+        const outs = [15, 14, 13, 12, 11, 10, 9, 7].map((p) => pin(r, p));
+        if (outs.filter((x) => x === 0).length !== 1 || outs[n] !== 0) return { ok: false, hint: '译码结果不对：检查 A/B/C 位序、G1 接高、G2A/G2B 接低。' };
+      }
+      return { ok: true };
+    }
+    if (id === 'co-dff') {
+      const q = () => {
+        const r = E.simulate(s);
+        return pin(r, 5);
+      };
+      sw('swD', 0); sw('swCLK', 0); q();
+      sw('swD', 1); sw('swCLK', 0);
+      if (q() !== 0) return { ok: false, hint: '时钟没上升时 Q 不应变化：检查 CLK 是否接对。' };
+      sw('swCLK', 1);
+      if (q() !== 1) return { ok: false, hint: '上升沿没有记住 D=1：检查 D、CLK 和 CLR/PRE 电平。' };
+      sw('swD', 0);
+      if (q() !== 1) return { ok: false, hint: '时钟保持高时 Q 不应跟着 D 变。' };
+      sw('swCLK', 0); q();
+      sw('swCLK', 1);
+      if (q() !== 0) return { ok: false, hint: '第二个上升沿没有记住 D=0。' };
+      return { ok: true };
+    }
+    if (id === 'co-nand') {
+      for (let n = 0; n < 4; n++) {
+        sw('swA', n & 1); sw('swB', (n >> 1) & 1);
+        const r = E.simulate(s);
+        if (pin(r, 3) !== ((n & 1) && ((n >> 1) & 1) ? 0 : 1)) return { ok: false, hint: 'NAND 输出不对：检查两个输入和 1Y 是否接对。' };
+      }
+      return { ok: true };
+    }
+    if (id === 'co-mux') {
+      sw('swA', 1); sw('swB', 0); sw('swS', 0);
+      if (pin(E.simulate(s), 4) !== 1) return { ok: false, hint: 'S=0 时应选 A：检查 1A、1B、S 和 E̅。' };
+      sw('swA', 0); sw('swB', 1); sw('swS', 1);
+      if (pin(E.simulate(s), 4) !== 1) return { ok: false, hint: 'S=1 时应选 B：检查 1A、1B、S 和 E̅。' };
+      return { ok: true };
+    }
+    if (id === 'co-compare') {
+      const cases = [[3, 5], [5, 5], [9, 4]];
+      for (const [a, b] of cases) {
+        for (let i = 0; i < 4; i++) { sw('swA' + i, (a >> i) & 1); sw('swB' + i, (b >> i) & 1); }
+        const r = E.simulate(s);
+        const gt = pin(r, 5), eq = pin(r, 6), lt = pin(r, 7);
+        if (gt !== (a > b ? 1 : 0) || eq !== (a === b ? 1 : 0) || lt !== (a < b ? 1 : 0)) {
+          return { ok: false, hint: '比较结果不对：检查 A/B 位序和级联输入 2=0、3=1、4=0。' };
+        }
+      }
+      return { ok: true };
+    }
+    return { ok: false, hint: '这一关还没有配置检查规则。' };
+  };
+
   Editor.prototype.taskState = function () {
     const task = E.TASKS[this.taskId];
     if (!task) return null;    const s = this.scene;
@@ -2574,6 +2654,16 @@
             this.labCheck = check;
             return !!(this.simRunning && check.ok);
           }
+          case 'co-power': return !!(rr.components.ic1 && rr.components.ic1.powered);
+          case 'co-wired': {
+            const need = { 'co-adder': 12, 'co-decoder': 14, 'co-dff': 8, 'co-nand': 6, 'co-mux': 9, 'co-compare': 12 };
+            return s.wires.length >= (need[this.labId] || 8);
+          }
+          case 'co-correct': {
+            const check = this.verifyCoLab();
+            this.labCheck = { ok: check.ok, hint: check.hint || '' };
+            return !!(this.simRunning && check.ok);
+          }
           case 'gate-power': return ics.length ? (r ? ics.every((c) => r.components[c.id] && r.components[c.id].powered) : icPoweredWired()) : false;
         case 'both-high': return switchVals.length >= 2 && switchVals.every((v) => v === 0);
         case 'any-high': return switchVals.some((v) => v === 0);
@@ -2603,7 +2693,7 @@
     const doneCount = steps.filter((s) => s.done).length;
     const pct = Math.round((doneCount / steps.length) * 100);
     const collapsed = this._taskCollapsed;
-    const checkStep = steps.find((s) => s.key === 'lab-correct');
+    const checkStep = steps.find((s) => s.key === 'lab-correct' || s.key === 'co-correct');
     const showCheckWarning = !!(this.labId && this.simRunning && checkStep && !checkStep.done);
     const issues = [];
     if (diag && diag.parts === false) issues.push('零件还没摆齐。');
