@@ -32,11 +32,12 @@
   icon.led = function () {
     return defs('<radialGradient id="iLed" cx=".36" cy=".3" r=".78"><stop offset="0" stop-color="#ffb3b3"/><stop offset=".55" stop-color="#ef4444"/><stop offset="1" stop-color="#b91c1c"/></radialGradient><radialGradient id="iLedGlow"><stop offset="0" stop-color="#ff5d5d" stop-opacity=".5"/><stop offset="1" stop-color="#ff5d5d" stop-opacity="0"/></radialGradient>') +
       '<circle cx="32" cy="23" r="19" fill="url(#iLedGlow)"/>' +
-      '<path d="M27 34v12M37 34v8" stroke="#9aa4b2" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M27 34c-4 3-4 8 1 10v4M37 34v8" stroke="#9aa4b2" stroke-width="2" stroke-linecap="round"/>' +
       '<rect x="23.5" y="29.5" width="17" height="5" rx="1.4" fill="#cbd5e1" stroke="#94a3b8" stroke-width=".7"/>' +
       '<circle cx="32" cy="22" r="10.5" fill="url(#iLed)" stroke="#a31616" stroke-width="1"/>' +
       '<path d="M25.5 18.5c1.6-3.3 5.4-4.9 8.6-4.1" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2.3" stroke-linecap="round"/>' +
-      '<path d="M26 31h12" stroke="#7f1d1d" stroke-opacity=".35" stroke-width="1"/>';
+      '<path d="M26 31h12" stroke="#7f1d1d" stroke-opacity=".35" stroke-width="1"/>' +
+      '<path d="M38.5 25.5l1.5 4" stroke="#3f1d1d" stroke-width="1.2" stroke-linecap="round"/>';
   };
 
   icon.button = function () {
@@ -280,10 +281,16 @@
     const bright = b ? Math.max(.25, Math.min(1, b.brightness)) : 0;
     const cx = 0, cy = -28;
     return '<circle class="led-glow ' + (b ? 'on' : '') + '" cx="' + cx + '" cy="' + cy + '" r="27" fill="url(#ledGlow' + colors + ')" style="opacity:' + (b ? .28 + bright * .62 : 0) + '"/>' +
-      '<path d="M' + a.x + ' ' + a.y + ' L-8 -16 M' + k.x + ' ' + k.y + ' L8 -16" stroke="#9aa4b2" stroke-width="2" stroke-linecap="round"/>' +
-      '<path d="M-8 -16 L-8 -21 M8 -16 L8 -21" stroke="#9aa4b2" stroke-width="2"/>' +
+      // Anode (A, long lead): deliberately curved and longer than the cathode.
+      '<path d="M' + a.x + ' ' + a.y + ' C' + (a.x - 5) + ' ' + (a.y - 3) + ' ' + (a.x - 5) + ' ' + (a.y - 8) + ' -10 -11 L-8 -17" fill="none" stroke="#d7dee8" stroke-width="2.5" stroke-linecap="round"/>' +
+      // Cathode (K, short lead): straight and visibly shorter.
+      '<path d="M' + k.x + ' ' + k.y + ' L9 -10 L8 -17" fill="none" stroke="#9aa4b2" stroke-width="1.7" stroke-linecap="round"/>' +
+      '<path d="M-8 -17 L-8 -21 M8 -17 L8 -21" stroke="#9aa4b2" stroke-width="2"/>' +
+      '<text x="' + (a.x - 1) + '" y="' + (a.y + 8) + '" text-anchor="middle" font-family="monospace" font-size="5.4" font-weight="700" fill="#3b82f6">A+</text>' +
+      '<text x="' + (k.x + 1) + '" y="' + (k.y + 8) + '" text-anchor="middle" font-family="monospace" font-size="5.4" font-weight="700" fill="#64748b">K−</text>' +
       '<rect x="-11" y="-22" width="22" height="4.6" rx="1.4" fill="#cbd5e1" stroke="#94a3b8" stroke-width=".6"/>' +
       '<circle class="led-core ' + (b ? 'on' : '') + '" cx="0" cy="' + (cy) + '" r="11" fill="' + (b ? palette[0] : palette[1]) + '" stroke="' + palette[1] + '" stroke-width=".9" style="color:' + palette[0] + ';fill:' + (b ? '#ff6262' : palette[1]) + '"/>' +
+      '<path d="M10.5 -24 L11.5 -18" stroke="#0f172a" stroke-width="1.2" stroke-linecap="round"/>' +
       '<path d="M-6.5 -33c1.6-2.8 4.3-4.2 6.8-4.1" fill="none" stroke="#fff" stroke-opacity=".66" stroke-width="2.2" stroke-linecap="round"/>' +
       '<path d="M-9.5 -18.5a11 11 0 0 0 19 0" fill="none" stroke="' + palette[2] + '" stroke-opacity=".22" stroke-width="1"/>' +
       '<path d="M-6 13v3M6 13v3" stroke="#7c8796" stroke-width="1.4" stroke-linecap="round"/>' +

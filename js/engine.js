@@ -749,6 +749,18 @@
     return s;
   };
 
+  Templates['lab01-hw'] = function () {
+    const s = baseScene('Lab 01 · 作业');
+    s.template = 'lab01-hw';
+    return s;
+  };
+
+  Templates['lab02-hw'] = function () {
+    const s = baseScene('Lab 02 · 作业');
+    s.template = 'lab02-hw';
+    return s;
+  };
+
   function coScene(name, template) {
     const s = baseScene(name);
     s.template = template;
@@ -1759,6 +1771,28 @@
         { key: 'co-correct', text: '运行仿真，验证 A>B、A=B、A<B 三种结果' }
       ],
       success: '比较器工作正常：三根输出线同一时刻只有一根为高。'
+    },
+    'lab01-hw': {
+      kicker: 'Lab 01 · 作业', title: '用 NAND 搭基本门',
+      summary: '开放式作业：只允许用 74HC00 的 NAND 门，搭出 NOT 和 AND，并提交电路与验证记录。',
+      steps: [
+        { key: 'hw-parts', text: '从元件库放置 74HC00、电源、开关、电阻和 LED' },
+        { key: 'hw-wired', text: '按作业要求自己设计接线：NOT 用 1 个 NAND，AND 用 2 个 NAND' },
+        { key: 'hw-run', text: '运行仿真，逐个输入组合确认结果' },
+        { key: 'hw-submit', text: '确认作业完成后，点击“提交作业”' }
+      ],
+      success: 'Lab 01 作业已提交。保留电路图、真值表和截图作为作业附件。'
+    },
+    'lab02-hw': {
+      kicker: 'Lab 02 · 作业', title: '2 位比较器设计',
+      summary: '开放式作业：用 Lab 02 学过的 74HC86/08/32 设计 2 位比较器，输出 A>B、A=B、A<B。',
+      steps: [
+        { key: 'hw-parts', text: '从元件库放置 74HC86、74HC08、74HC32、电源、开关和 LED' },
+        { key: 'hw-wired', text: '按自己的方案接线：先比较高位，再处理低位和相等情况' },
+        { key: 'hw-run', text: '运行仿真，验证 3<5、5=5、9>4 等组合' },
+        { key: 'hw-submit', text: '确认作业完成后，点击“提交作业”' }
+      ],
+      success: 'Lab 02 作业已提交。保留比较器电路图、真值表和测试截图。'
     }
   };
 

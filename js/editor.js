@@ -1831,6 +1831,7 @@
       if (action === 'task-collapse') return this.toggleTask();
       if (action === 'task-reset') return this.resetScene();
       if (action === 'lab-guide') { if (this.labId && BBL.ui.labGuide) BBL.ui.labGuide(this.labId); return; }
+      if (action === 'hw-submit') { this.submitHomework(); return; }
     }
     if (e.target.closest('#side-scrim')) { this.closePanel(); return; }
     // card keyboard activation
@@ -2582,6 +2583,16 @@
     return { ok: false, hint: '这一关还没有配置检查规则。' };
   };
 
+  Editor.prototype.submitHomework = function () {
+    const task = E.TASKS[this.taskId];
+    if (!task || !task.steps.some((s) => s.key === 'hw-submit')) return;
+    if (!this.simRunning) this.toast('先运行一次仿真，确认作业电路能工作。', 'warn');
+    this.scene.hwSubmitted = true;
+    this.commit('提交作业');
+    this.renderTask();
+    this.toast('作业已提交，进度已保存。', 'success');
+  };
+
   Editor.prototype.taskState = function () {
     const task = E.TASKS[this.taskId];
     if (!task) return null;    const s = this.scene;
@@ -2693,6 +2704,10 @@
             return !!(this.simRunning && check.ok);
           }
           case 'co-power': return !!(rr.components.ic1 && rr.components.ic1.powered);
+          case 'hw-parts': return comps.length >= 3;
+          case 'hw-wired': return s.wires.length >= 6;
+          case 'hw-run': return !!this.simRunning;
+          case 'hw-submit': return !!s.hwSubmitted;
           case 'co-wired': {
             const need = { 'co-adder': 12, 'co-decoder': 14, 'co-dff': 8, 'co-nand': 6, 'co-mux': 9, 'co-compare': 12 };
             return s.wires.length >= (need[this.labId] || 8);
@@ -2732,6 +2747,7 @@
     const pct = Math.round((doneCount / steps.length) * 100);
     const collapsed = this._taskCollapsed;
     const checkStep = steps.find((s) => s.key === 'lab-correct' || s.key === 'co-correct');
+    const hwStep = steps.find((s) => s.key === 'hw-submit');
     const showCheckWarning = !!(this.labId && this.simRunning && checkStep && !checkStep.done);
     const issues = [];
     if (diag && diag.parts === false) issues.push('零件还没摆齐。');
@@ -2780,6 +2796,7 @@
           ${this.taskId === 'arduino-blink'
             ? `<button class="btn sm ${this.codeOpen ? '' : 'accent'}" data-action="toggle-code">${svgIcon('code')} ${this.codeOpen ? '关闭代码' : '打开代码编辑器'}</button>`
             : `<button class="btn sm ${complete || this.labId ? '' : 'accent'}" data-action="task-check">${this.simRunning ? svgIcon('stop') + ' 暂停' : svgIcon('play') + ' 运行检查'}</button>`}
+          ${hwStep && !hwStep.done ? `<button class="btn sm accent" data-action="hw-submit">${svgIcon('check-circle')} 提交作业</button>` : ''}
           <button class="btn sm ghost" data-action="task-reset" title="重新载入本次实验">${svgIcon('reset')} 重置</button>
         </div>
       </div>
