@@ -2415,9 +2415,9 @@
       const anyOn = Object.keys(patterns).some((ledId) => patterns[ledId].some((v) => v === 1));
       return {
         ok: wrong === 0, total: total, wrong: wrong, anyOn: anyOn,
-        hint: anyOn
+        hint: wrong === 0 ? '' : (anyOn
           ? '小灯亮过，但不同输入组合下结果不对：重点检查输入脚、C/D 固定电平，以及输出是不是取自正确引脚。'
-          : '小灯一次都没亮：先查芯片电源、输出脚、电阻、LED 方向和 GND。'
+          : '小灯一次都没亮：先查芯片电源、输出脚、电阻、LED 方向和 GND。')
       };
     }
     if (id === 'lab01-final') {
@@ -2555,7 +2555,8 @@
             let ok = false;
             if (this.labId === 'lab01-nand') ok = outPathOk('ic1', '6', 'r1', 'led1');
             else if (this.labId === 'lab01-not') ok = outPathOk('ic1', '2', 'r1', 'led1');
-            else if (this.labId === 'lab01-and' || this.labId === 'lab01-xor' || this.labId === 'lab01-or') ok = outPathOk('ic1', '3', 'r1', 'led1');
+            else if (this.labId === 'lab01-and') ok = outPathOk('ic1', '6', 'r1', 'led1');
+            else if (this.labId === 'lab01-xor' || this.labId === 'lab01-or') ok = outPathOk('ic1', '3', 'r1', 'led1');
             else if (this.labId === 'lab02-half') ok = outPathOk('xor1', '3', 'r1', 'led1') && outPathOk('and1', '3', 'r2', 'led2');
             else if (this.labId === 'lab02-full') ok = outPathOk('xor1', '6', 'rSum', 'ledSum') && outPathOk('or1', '3', 'rCout', 'ledCout');
             else if (ics.length) {
