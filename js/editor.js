@@ -2593,7 +2593,7 @@
             if (this.taskId === 'lab02-final') {
               return hasSource && has('ic74hc86') && has('ic74hc08') && has('ic74hc32') && switches >= 3 && resistors >= 2 && leds >= 2;
             }
-            return hasSource && ['ic74hc20', 'ic74hc04', 'ic74hc21', 'ic74hc86', 'ic74hc32'].every((t) => has(t)) && switches >= 2 && resistors >= 5 && leds >= 5;
+            return hasSource && ['ic74hc00', 'ic74hc04', 'ic74hc08', 'ic74hc86', 'ic74hc32'].every((t) => has(t)) && switches >= 2 && resistors >= 5 && leds >= 5;
           }
           case 'lab-path': {
             const r = comps.find((c) => c.type === 'resistor');
@@ -2633,9 +2633,9 @@
           }
           case 'lab-output': {
             let ok = false;
-            if (this.labId === 'lab01-nand') ok = outPathOk('ic1', '6', 'r1', 'led1');
+            if (this.labId === 'lab01-nand') ok = outPathOk('ic1', '3', 'r1', 'led1');
             else if (this.labId === 'lab01-not') ok = outPathOk('ic1', '2', 'r1', 'led1');
-            else if (this.labId === 'lab01-and') ok = outPathOk('ic1', '6', 'r1', 'led1');
+            else if (this.labId === 'lab01-and') ok = outPathOk('ic1', '3', 'r1', 'led1');
             else if (this.labId === 'lab01-xor' || this.labId === 'lab01-or') ok = outPathOk('ic1', '3', 'r1', 'led1');
             else if (this.labId === 'lab02-half') ok = outPathOk('xor1', '3', 'r1', 'led1') && outPathOk('and1', '3', 'r2', 'led2');
             else if (this.labId === 'lab02-full') ok = outPathOk('xor1', '6', 'rSum', 'ledSum') && outPathOk('or1', '3', 'rCout', 'ledCout');
@@ -2703,8 +2703,8 @@
     if (!issues.length) {
       issues.push((this.labCheck && this.labCheck.hint) || '接线路径看起来通了，但输出组合还没全部对上。');
       const pinHints = {
-        'lab01-nand': '74HC20 的 1Y 是第 6 脚，第 8 脚是另一个门的输出。',
-        'lab01-and': '74HC21 的 1Y 是第 6 脚。',
+        'lab01-nand': '74HC00 的 1Y 是第 3 脚。',
+        'lab01-and': '74HC08 的 1Y 是第 3 脚。',
         'lab01-not': '74HC04 的 1Y 是第 2 脚。',
         'lab01-xor': '74HC86 的 1Y 是第 3 脚。',
         'lab01-or': '74HC32 的 1Y 是第 3 脚。'

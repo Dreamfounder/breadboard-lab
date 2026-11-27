@@ -534,9 +534,9 @@
     s.wires = [];
     return s;
   };
-  Templates['lab01-nand'] = function () { return labChipDemo('ic74hc20', 'Lab 01 · 74HC20 NAND', 'lab01-nand', { fourInput: true, ledColor: 'red' }); };
+  Templates['lab01-nand'] = function () { return labChipDemo('ic74hc00', 'Lab 01 · 74HC00 NAND', 'lab01-nand', { ledColor: 'red' }); };
   Templates['lab01-not'] = function () { return labChipDemo('ic74hc04', 'Lab 01 · 74HC04 NOT', 'lab01-not', { oneInput: true, ledColor: 'green' }); };
-  Templates['lab01-and'] = function () { return labChipDemo('ic74hc21', 'Lab 01 · 74HC21 AND', 'lab01-and', { fourInput: true, ledColor: 'green' }); };
+  Templates['lab01-and'] = function () { return labChipDemo('ic74hc08', 'Lab 01 · 74HC08 AND', 'lab01-and', { ledColor: 'green' }); };
   Templates['lab01-xor'] = function () { return labChipDemo('ic74hc86', 'Lab 01 · 74HC86 XOR', 'lab01-xor', { ledColor: 'yellow' }); };
   Templates['lab01-or'] = function () { return labChipDemo('ic74hc32', 'Lab 01 · 74HC32 OR', 'lab01-or', { ledColor: 'green' }); };
 
@@ -1598,11 +1598,11 @@
     },
     'lab01-nand': {
       kicker: 'Lab 01 · 关卡 02',
-      title: '74HC20 · NAND',
+      title: '74HC00 · NAND',
       summary: '芯片、开关、电阻和 LED 都已就位，但一根线都没接。按提示自己完成。',
       steps: [
-        { key: 'lab-power', text: '把 74HC20 的第 14 脚接 V+、第 7 脚接 GND' },
-        { key: 'lab-inputs', text: '把 A/B 开关接到输入脚；C/D 该接什么？先想清楚再接' },
+        { key: 'lab-power', text: '把 74HC00 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: '把 A/B 开关分别接到第 1、2 脚' },
         { key: 'lab-output', text: '把输出脚经 1kΩ 接 LED，LED 阴极回 GND' },
         { key: 'lab-correct', text: '运行仿真，切换 A/B，自己观察并记录输出' }
       ],
@@ -1622,11 +1622,11 @@
     },
     'lab01-and': {
       kicker: 'Lab 01 · 关卡 04',
-      title: '74HC21 · AND',
-      summary: '先接电源和输入，再想清楚 4 输入 AND 的多余输入怎么处理。',
+      title: '74HC08 · AND',
+      summary: '先接电源和输入，再验证两个输入都为 1 时输出才为 1。',
       steps: [
-        { key: 'lab-power', text: '把 74HC21 的第 14 脚接 V+、第 7 脚接 GND' },
-        { key: 'lab-inputs', text: 'A/B 接开关；未使用的 C/D 应该接高还是接低？' },
+        { key: 'lab-power', text: '把 74HC08 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: '把 A/B 开关分别接到第 1、2 脚' },
         { key: 'lab-output', text: '把输出脚经 1kΩ 接 LED，LED 阴极回 GND' },
         { key: 'lab-correct', text: '运行仿真，切换 A/B，记录输出' }
       ],
@@ -1687,7 +1687,7 @@
       steps: [
         { key: 'lab-final-parts', text: '从元件库放置五片 Lab 01 芯片、2 个开关、5 个 1kΩ、5 个 LED 和电源' },
         { key: 'lab-power', text: '给五片芯片都接好电源，逐片检查是否真的通电' },
-        { key: 'lab-inputs', text: '接好共享输入；74HC20/21 的 C/D 该接什么？自己判断' },
+        { key: 'lab-inputs', text: '接好共享输入；五片芯片都只需 A/B 两个输入' },
         { key: 'lab-output', text: '每片输出都经 1kΩ 接 LED，并让 LED 阴极回到 GND' },
         { key: 'lab-correct', text: '运行仿真，逐片验证并填完五张真值表' }
       ],
