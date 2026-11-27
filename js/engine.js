@@ -1384,6 +1384,42 @@
       cr.powered = ic.powered;
       cr.vcc = ic.vcc; cr.gnd = ic.gnd;
       const icLabel = ic.info ? ic.info.label : (ic.special ? ic.special.label : ic.comp.type);
+      let supplyCurrent = 0;
+      const damageReasons = [];
+      if (ic.powered) {
+        const gndPin = ic.special ? String(ic.special.gnd) : '7';
+        const sourceR = ic.special ? 40 : 150;
+        const names = IC_PIN_NAMES[ic.comp.type] || {};
+        const outputPin = (pin, out, active) => {
+          if (!active) return;
+          const outNet = pn[String(pin)];
+          const vd = (volts[outNet] || 0) - (volts[pn[gndPin]] || 0);
+          const target = out ? ic.outV : ic.outGnd;
+          const current = Math.abs((target - vd) / sourceR);
+          supplyCurrent += current;
+          const pr = pinResult[ic.comp.id] && pinResult[ic.comp.id][String(pin)];
+          if (pr) pr.current = current;
+          if (current > 0.025) {
+            damageReasons.push('通过引脚 ' + (names[String(pin)] || ('第 ' + pin + ' 脚')) + ' 的电流为 ' + (current * 1000).toFixed(1) + ' mA，而最大值为 25.0 mA。');
+          }
+        };
+        if (ic.special) ic.outputs.forEach((o) => outputPin(o.pin, o.out, o.active));
+        else ic.gates.forEach((g) => outputPin(g.y, g.out, g.active));
+        supplyCurrent += 0.002;
+        cr.supplyCurrent = supplyCurrent;
+        if (supplyCurrent > 0.05) {
+          damageReasons.push('通过电源引脚的总电流为 ' + (supplyCurrent * 1000).toFixed(1) + ' mA，而最大值为 50.0 mA。');
+        }
+        if (damageReasons.length) {
+          cr.damaged = true;
+          cr.damageReasons = damageReasons;
+          warnings.push({
+            code: 'device-damaged', level: 'error', compId: ic.comp.id,
+            message: '此设备因以下原因而损坏：\n' + damageReasons.join('\n'),
+            reasons: damageReasons
+          });
+        }
+      }
       if (!ic.powered && ic.hasWire) {
         const vp = ic.special ? ic.special.vcc : 14;
         const gp = ic.special ? ic.special.gnd : 7;

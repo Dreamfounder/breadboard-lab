@@ -339,6 +339,7 @@
               </div>
 
               <div id="task-slot"></div>
+              <div id="damage-card" class="damage-card" hidden></div>
               <div class="empty-canvas-hint" id="empty-hint" hidden></div>
 
               <div class="sim-hud" id="sim-hud"></div>
@@ -437,6 +438,7 @@
     this.$simBtnLabel = this.mount.querySelector('#sim-btn-label');
     this.$hud = this.mount.querySelector('#sim-hud');
     this.$taskSlot = this.mount.querySelector('#task-slot');
+    this.$damageCard = this.mount.querySelector('#damage-card');
     this.$emptyHint = this.mount.querySelector('#empty-hint');
     this.$codeDrawer = this.mount.querySelector('#code-drawer');
     this.$codeEntry = this.mount.querySelector('#code-entry');
@@ -773,6 +775,7 @@
         '<rect class="selection-ring halo" x="' + (b.x - 5) + '" y="' + (b.y - 5) + '" width="' + (b.w + 10) + '" height="' + (b.h + 10) + '" rx="7"/>' +
         '<rect class="selection-ring" x="' + (b.x - 5) + '" y="' + (b.y - 5) + '" width="' + (b.w + 10) + '" height="' + (b.h + 10) + '" rx="7"/>' +
         '<g class="comp-body">' + Art.component(comp, pins) + '</g>' +
+        (sim && sim.damaged ? '<g class="damage-mark" pointer-events="none"><path d="M0 -28l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z" fill="#facc15" stroke="#b91c1c" stroke-width="1.5"/><circle cx="15" cy="-25" r="7" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.2"/><text x="15" y="-21" text-anchor="middle" font-size="9" font-weight="800" fill="#b91c1c">!</text></g>' : '') +
         (labelText ? '<text class="comp-label" x="0" y="' + (b.y + b.h + 9) + '">' + esc(labelText) + '</text>' : '') +
         '</g>';
     });
@@ -1832,6 +1835,7 @@
       if (action === 'task-reset') return this.resetScene();
       if (action === 'lab-guide') { if (this.labId && BBL.ui.labGuide) BBL.ui.labGuide(this.labId); return; }
       if (action === 'hw-submit') { this.submitHomework(); return; }
+      if (action === 'close-damage') { this.hideDamage(); return; }
     }
     if (e.target.closest('#side-scrim')) { this.closePanel(); return; }
     // card keyboard activation
@@ -2009,15 +2013,31 @@
     this.$simBtn.classList.add('running');
     this.$simBtn.innerHTML = svgIcon('pause') + '<span id="sim-btn-label">暂停模拟</span>';
     this.$simBtnLabel = this.mount.querySelector('#sim-btn-label');
+    this.hideDamage();
     this.runSimulation();
     const warns = this.simResult ? this.simResult.warnings : [];
-    if (warns.length) {
+    const damage = warns.find((w) => w.code === 'device-damaged');
+    if (damage) {
+      this.showDamage(damage);
+    } else if (warns.length) {
       const err = warns.find((w) => w.level === 'error') || warns[0];
       this.toast(err.message, err.level === 'error' ? 'warn' : 'info');
     } else {
       this.toast('模拟已启动，可以点击按钮或开关试试。');
     }
     this.updateStatus();
+  };
+
+  Editor.prototype.showDamage = function (warning) {
+    if (!this.$damageCard) return;
+    const reasons = (warning.reasons && warning.reasons.length) ? warning.reasons : [warning.message];
+    this.$damageCard.innerHTML = '<div class="damage-head"><span class="damage-star">★</span><div><b>此设备因以下原因而损坏：</b>' +
+      reasons.map((r) => '<p>' + esc(r) + '</p>').join('') + '</div><button class="damage-close" data-action="close-damage" aria-label="关闭">×</button></div>';
+    this.$damageCard.hidden = false;
+  };
+
+  Editor.prototype.hideDamage = function () {
+    if (this.$damageCard) this.$damageCard.hidden = true;
   };
 
   Editor.prototype.stopSimulation = function () {
@@ -2029,6 +2049,7 @@
     this.codeIO = {};
     this.simRunning = false;
     this.simResult = null;
+    this.hideDamage();
     this.$stage.classList.remove('sim-running');
     this.$simBtn.classList.remove('running');
     this.$simBtn.innerHTML = svgIcon('play') + '<span id="sim-btn-label">开始模拟</span>';
