@@ -68,6 +68,8 @@
 
 ![任务完成后下一关](docs/preview-next-level.png)
 
+![Lab 01 终验正确/错误对比](docs/preview-final-compare.png)
+
 ![错误接线会被整表检查拦住](docs/preview-wrong-check.png)
 
 ### 元件百科

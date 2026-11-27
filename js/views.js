@@ -593,6 +593,23 @@
       '&task=' + encodeURIComponent(level.taskId);
   }
 
+  function labCompareHtml(level) {
+    if (!level || level.id !== 'lab01-final') return '';
+    return '<section class="lab-section lab-compare-section"><div class="lab-section-head"><span>对比</span><h2>正确 / 错误对比</h2></div>' +
+      '<div class="lab-compare"><div class="compare-panel ok"><h3>✅ 正确接法</h3>' +
+      '<div><b>A</b><span>同时送到 74HC00/04/08/86/32 的 1A（第 1 脚）</span></div>' +
+      '<div><b>B</b><span>同时送到 74HC00/08/86/32 的 1B（第 2 脚）</span></div>' +
+      '<div><b>74HC04</b><span>只接 A 到 1A（第 1 脚），输出取 1Y（第 2 脚）</span></div>' +
+      '<div><b>输出脚</b><span>00/08/86/32 都取 1Y（第 3 脚），不要取第 6 脚</span></div>' +
+      '<div><b>LED</b><span>每片输出 → 1kΩ → LED → GND；14 脚 V+，7 脚 GND</span></div>' +
+      '</div><div class="compare-panel bad"><h3>❌ 常见错误</h3>' +
+      '<div><b>74HC04 接 B</b><span>00/11 看起来对，但 01/10 的输出会反掉</span></div>' +
+      '<div><b>输出取第 6 脚</b><span>第 6 脚是第二个门的 2Y，不是本实验的 1Y</span></div>' +
+      '<div><b>A/B 没有共用</b><span>五片芯片看到的输入不一样，整表对不上</span></div>' +
+      '<div><b>只接一个输入</b><span>另一个输入悬空，CMOS 芯片会乱猜</span></div>' +
+      '</div></div><p class="lab-compare-note">先看 00 行：只有 NAND 和 NOT 应该亮；如果这里就错，先查电源和输出脚。再看 01/10：NOT 在这两行都应亮；如果不亮，通常是 NOT 接到了 B。</p></section>';
+  }
+
   function labPartsHtml(level) {
     const seen = {};
     const base = '<div class="lab-part-list">' + level.parts.filter((id) => {
@@ -750,6 +767,7 @@
       (level.plain ? '<div class="lab-easy"><span>先用人话说</span><p>' + esc(level.plain) + '</p></div>' : '') +
       '<section class="lab-section"><div class="lab-section-head"><span>01</span><h2>原理背景</h2></div><div class="lab-prose">' + level.background.map((p) => '<p>' + esc(p) + '</p>').join('') + '</div></section>' +
       '<section class="lab-section"><div class="lab-section-head"><span>02</span><h2>操作步骤</h2></div><ol class="lab-steps">' + level.steps.map((s, i) => '<li><span class="lab-step-num">' + (i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p>' + esc(s.body) + '</p>' + (s.why ? '<small class="lab-step-why">为什么这样做：' + esc(s.why) + '</small>' : '') + '</div></li>').join('') + '</ol></section>' +
+      labCompareHtml(level) +
       (level.final
         ? '<section class="lab-section"><div class="lab-section-head"><span>03</span><h2>终验规则</h2></div><div class="lab-final-rules">' + svgIcon('target') + '<div><b>不提供完整接线表</b><span>这一关检验你是否能不依赖现成接法完成电路。卡住时先回看对应的练习关；仍需要帮助时，可以展开思路提示。</span></div></div><details class="lab-detail-hints"><summary>' + svgIcon('lightbulb') + ' 展开思路提示</summary><div class="lab-guide-tip">' + svgIcon('lightbulb') + '<span><b>思路：</b>' + esc(level.background[level.background.length - 1]) + '</span></div></details></section>'
         : '<section class="lab-section"><div class="lab-section-head"><span>03</span><h2>接线提示</h2></div><p class="lab-hint-intro">先自己观察参考电路。确实需要时再展开逐线提示。</p><details class="lab-detail-hints"><summary>' + svgIcon('branch') + ' 展开接线提示</summary><div class="lab-wiring-table">' + level.wiring.map((w) => '<div class="lab-wire-row"><span class="from">' + esc(w.from) + '</span>' + svgIcon('arrow-right') + '<span class="to">' + esc(w.to) + '</span><em>' + esc(w.why) + '</em></div>').join('') + '</div></details></section>') +

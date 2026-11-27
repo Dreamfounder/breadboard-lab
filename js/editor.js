@@ -2418,7 +2418,7 @@
       return {
         ok: wrong === 0, total: total, wrong: wrong, anyOn: anyOn,
         hint: wrong === 0 ? '' : (anyOn
-          ? '小灯亮过，但不同输入组合下结果不对：重点检查输入脚、C/D 固定电平，以及输出是不是取自正确引脚。'
+          ? '小灯亮过，但不同输入组合下结果不对：重点检查输入脚，以及输出是不是取自正确引脚。'
           : '小灯一次都没亮：先查芯片电源、输出脚、电阻、LED 方向和 GND。')
       };
     }
@@ -2438,7 +2438,7 @@
       return {
         ok: wrong === 0, total: 5, wrong: wrong, anyOn: anyOn,
         hint: anyOn
-          ? '有灯亮，但五片芯片的输出规律没有全部对上：逐片检查输入、C/D 和输出脚。'
+          ? '有灯亮，但五片芯片的输出规律没有全部对上：逐片检查 A/B 输入和每片 1Y 输出脚。'
           : '所有灯都没亮：先确认五片芯片都通电，再逐片检查输出、电阻、LED 方向和 GND。'
       };
     }
@@ -2464,6 +2464,44 @@
       };
     }
     return { ok: false, total: total, wrong: total, anyOn: false, hint: '电路还没有形成可用的输出，先检查电源和输出路径。' };
+  };
+
+  Editor.prototype.verifyLab01Final = function () {
+    const s = E.clone(this.scene);
+    const switches = s.components.filter((c) => c.type === 'slide-switch').slice(0, 2);
+    if (switches.length < 2) return { ok: false, hint: '先放两个输入开关，并把 A/B 接到五片芯片。' };
+    const chips = s.components.filter((c) => ['ic74hc00', 'ic74hc04', 'ic74hc08', 'ic74hc86', 'ic74hc32'].includes(c.type));
+    if (!chips.length) return { ok: false, hint: '还没有放五片门芯片。' };
+    const outPin = { ic74hc00: '3', ic74hc04: '2', ic74hc08: '3', ic74hc86: '3', ic74hc32: '3' };
+    const expected = {
+      ic74hc00: [1, 1, 1, 0],
+      ic74hc04: [1, 1, 0, 0],
+      ic74hc08: [0, 0, 0, 1],
+      ic74hc86: [0, 1, 1, 0],
+      ic74hc32: [0, 1, 1, 1]
+    };
+    const failed = [];
+    for (const chip of chips) {
+      const pin = outPin[chip.type];
+      if (!pin) continue;
+      const got = [];
+      for (let i = 0; i < 4; i++) {
+        switches[0].props.position = (i >> 1) & 1 ? 0 : 1;
+        switches[1].props.position = i & 1 ? 0 : 1;
+        const r = E.simulate(s);
+        const p = r.pins[chip.id] && r.pins[chip.id][pin];
+        got.push(p && p.voltage > 1.5 ? 1 : 0);
+      }
+      if (got.join('') !== expected[chip.type].join('')) failed.push({ type: chip.type, got: got.join('') });
+    }
+    if (failed.length) {
+      const names = { ic74hc00: '74HC00 NAND', ic74hc04: '74HC04 NOT', ic74hc08: '74HC08 AND', ic74hc86: '74HC86 XOR', ic74hc32: '74HC32 OR' };
+      return {
+        ok: false,
+        hint: failed.map((f) => names[f.type]).join('、') + ' 的输出规律不对：检查 A/B 是否同时送到每片输入、NOT 是否只用 A，以及输出是否取自 1Y。'
+      };
+    }
+    return { ok: true, hint: '' };
   };
 
   Editor.prototype.verifyCoLab = function () {
@@ -2650,7 +2688,7 @@
           }
           case 'lab-run': return !!(this.simRunning && lit);
           case 'lab-correct': {
-            const check = this.verifyLabTruth();
+            const check = this.labId === 'lab01-final' ? this.verifyLab01Final() : this.verifyLabTruth();
             this.labCheck = check;
             return !!(this.simRunning && check.ok);
           }
@@ -2698,7 +2736,7 @@
     const issues = [];
     if (diag && diag.parts === false) issues.push('零件还没摆齐。');
     if (diag && diag.power === false) issues.push('芯片还没真正通电：查 14/7 脚和电源。');
-    if (diag && diag.inputs === false) issues.push('开关或 C/D 还没接到正确电平：查输入脚，C/D 要接高。');
+    if (diag && diag.inputs === false) issues.push('开关或输入脚还没接到正确位置：查每片芯片的 A/B 输入。');
     if (diag && diag.output === false) issues.push('输出到灯的路径不完整：查输出脚、电阻、LED 方向和 GND。');
     if (!issues.length) {
       issues.push((this.labCheck && this.labCheck.hint) || '接线路径看起来通了，但输出组合还没全部对上。');
