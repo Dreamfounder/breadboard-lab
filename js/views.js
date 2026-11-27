@@ -612,20 +612,32 @@
       '&task=' + encodeURIComponent(level.taskId);
   }
 
+  function labWorksheetHtml(level) {
+    if (!level.worksheet || !level.worksheet.length) return '';
+    return '<section class="lab-section lab-worksheet-section"><div class="lab-section-head"><span>作业</span><h2>需要完成的真值表</h2></div>' +
+      '<div class="lab-worksheet">' + level.worksheet.map((w) => {
+        return '<div class="lab-worksheet-table"><h3>' + esc(w.name) + '</h3><table><thead><tr>' +
+          w.headers.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr></thead><tbody>' +
+          w.rows.map((r) => '<tr>' + r.map((v) => '<td>' + esc(v) + '</td>').join('') + '<td class="worksheet-blank"></td></tr>').join('') +
+          '</tbody></table></div>';
+      }).join('') + '</div><p class="lab-worksheet-note">按文档要求，把每张表的 Output 列填完；空白列是给你写观察结果的，不会直接给答案。</p></section>';
+  }
+
   function labCompareHtml(level) {
     if (!level || level.id !== 'lab01-final') return '';
     return '<section class="lab-section lab-compare-section"><div class="lab-section-head"><span>对比</span><h2>正确 / 错误对比</h2></div>' +
       '<div class="lab-compare"><div class="compare-panel ok"><h3>✅ 正确接法</h3>' +
-      '<div><b>A</b><span>同时送到 74HC00/04/08/86/32 的 1A（第 1 脚）</span></div>' +
-      '<div><b>B</b><span>同时送到 74HC00/08/86/32 的 1B（第 2 脚）</span></div>' +
+      '<div><b>A</b><span>同时送到 74HC20/04/21/86/32 的 1A（第 1 脚）</span></div>' +
+      '<div><b>B</b><span>同时送到 74HC20/21/86/32 的 1B（第 2 脚）</span></div>' +
+      '<div><b>74HC20/21</b><span>C/D（第 4、5 脚）接高电平，只用 A/B 做 2 输入实验</span></div>' +
       '<div><b>74HC04</b><span>只接 A 到 1A（第 1 脚），输出取 1Y（第 2 脚）</span></div>' +
-      '<div><b>输出脚</b><span>74HC00/08/86/32 都取 1Y（第 3 脚），不要取第 6 脚</span></div>' +
+      '<div><b>输出脚</b><span>74HC20/21 取第 6 脚；74HC86/32 取第 3 脚</span></div>' +
       '<div><b>LED</b><span>每片输出 → 1kΩ → LED → GND；14 脚 V+，7 脚 GND</span></div>' +
       '</div><div class="compare-panel bad"><h3>❌ 常见错误</h3>' +
       '<div><b>74HC04 接 B</b><span>00/11 看起来对，但 01/10 的输出会反掉</span></div>' +
-      '<div><b>输出取第 6 脚</b><span>第 6 脚是第二个门的 2Y，不是本实验的 1Y</span></div>' +
+      '<div><b>20/21 输出取第 3 脚</b><span>第 3 脚是 NC；1Y 是第 6 脚</span></div>' +
+      '<div><b>20/21 的 C/D 空着</b><span>CMOS 输入悬空，输出会乱猜</span></div>' +
       '<div><b>A/B 没有共用</b><span>五片芯片看到的输入不一样，整表对不上</span></div>' +
-      '<div><b>只接一个输入</b><span>另一个输入悬空，CMOS 芯片会乱猜</span></div>' +
       '</div></div><p class="lab-compare-note">先看 00 行：只有 NAND 和 NOT 应该亮；如果这里就错，先查电源和输出脚。再看 01/10：NOT 在这两行都应亮；如果不亮，通常是 NOT 接到了 B。</p></section>';
   }
 
@@ -785,9 +797,12 @@
         ? '<div class="lab-start-banner final">' + svgIcon('target') + '<div><b>终验关 · 空白画布</b><span>这一关<strong>没有零件，也没有导线</strong>。请打开右侧元件库，自己摆放芯片、开关、电阻和 LED，再独立完成接线。</span></div></div>'
         : (level.mode === 'asm'
           ? '<div class="lab-start-banner asm-banner">' + svgIcon('code') + '<div><b>8051 汇编实验台</b><span>这一关不用面包板。打开后直接写 8051 汇编，点击“运行/单步”观察寄存器、P1/P2 和 2000h 数据存储器。</span></div></div>'
-          : '<div class="lab-start-banner">' + svgIcon('branch') + '<div><b>练习关</b><span>元件已经摆在面包板上，但<strong>所有导线都是断开的</strong>。请按任务卡自己接线；卡住时再展开下方提示。最后的终验关会连零件都不提供。</span></div></div>')) +
+          : (level.homework
+            ? '<div class="lab-start-banner final">' + svgIcon('check-circle') + '<div><b>作业关 · 空白画布</b><span>按文档的 Assignment 自己摆放零件、逐片验证并填写真值表；作业要求就在下方，完成后在实验台点“提交作业”。</span></div></div>'
+            : '<div class="lab-start-banner">' + svgIcon('branch') + '<div><b>练习关</b><span>元件已经摆在面包板上，但<strong>所有导线都是断开的</strong>。请按任务卡自己接线；卡住时再展开下方提示。最后的终验关会连零件都不提供。</span></div></div>'))) +
       (level.plain ? '<div class="lab-easy"><span>先用人话说</span><p>' + esc(level.plain) + '</p></div>' : '') +
       (level.assignment ? '<section class="lab-section lab-assignment"><div class="lab-section-head"><span>作业</span><h2>作业要求</h2></div><p>' + esc(level.assignment) + '</p><div class="lab-assignment-tip">' + svgIcon('info') + '<span>画布是空的；完成后在实验台任务卡里点“提交作业”，进度会保存。</span></div></section>' : '') +
+      labWorksheetHtml(level) +
       '<section class="lab-section"><div class="lab-section-head"><span>01</span><h2>原理背景</h2></div><div class="lab-prose">' + level.background.map((p) => '<p>' + esc(p) + '</p>').join('') + '</div></section>' +
       '<section class="lab-section"><div class="lab-section-head"><span>02</span><h2>操作步骤</h2></div><ol class="lab-steps">' + level.steps.map((s, i) => '<li><span class="lab-step-num">' + (i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p>' + esc(s.body) + '</p>' + (s.why ? '<small class="lab-step-why">为什么这样做：' + esc(s.why) + '</small>' : '') + '</div></li>').join('') + '</ol></section>' +
       labCompareHtml(level) +
@@ -803,7 +818,7 @@
       '<section class="lab-section"><div class="lab-section-head"><span>06</span><h2>完成检查</h2></div><div class="lab-checks">' + level.checkpoints.map((c) => '<div>' + svgIcon('check-circle') + '<span>' + esc(c) + '</span></div>').join('') + '</div><div class="lab-submit"><b>提交建议</b><p>' + esc(level.submit) + '</p></div></section>' +
       '<div class="lab-pager">' + (prev ? '<a href="#/labs/' + prev.id + '"><span>上一关</span><b>' + esc(prev.title) + '</b></a>' : '<span></span>') + (next ? '<a class="next" href="#/labs/' + next.id + '"><span>下一关</span><b>' + esc(next.title) + '</b></a>' : '') + '</div>' +
       '</div>' +
-      '<aside class="lab-detail-side"><div class="lab-side-card"><div class="lab-side-label">本关任务</div><div class="lab-side-progress"><div><b>' + (complete ? '已完成' : '待完成') + '</b><span>' + track.label + ' · ' + (level.final ? 'FINAL' : 'Level ' + level.number) + '</span></div>' + (complete ? '<i class="done">' + svgIcon('check') + '</i>' : '<i>' + (level.final ? '★' : level.number) + '</i>') + '</div><a class="btn primary block" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><p class="lab-side-note">' + svgIcon('info') + (level.mode === 'asm' ? ' 汇编实验台直接在浏览器里运行，不需要面包板。' : ' 参考练习的元件已摆好但导线断开；终验关没有零件。完成任务卡后自动记录。') + '</p>' + (level.mode === 'asm' ? '' : '<button class="btn ghost block" data-lab-guide="' + level.id + '">' + svgIcon('keyboard') + ' 在弹窗中查看步骤</button>') + '</div>' +
+      '<aside class="lab-detail-side"><div class="lab-side-card"><div class="lab-side-label">本关任务</div><div class="lab-side-progress"><div><b>' + (complete ? '已完成' : '待完成') + '</b><span>' + track.label + ' · ' + (level.final ? 'FINAL' : 'Level ' + level.number) + '</span></div>' + (complete ? '<i class="done">' + svgIcon('check') + '</i>' : '<i>' + (level.final ? '★' : level.number) + '</i>') + '</div><a class="btn primary block" href="' + href + '">' + svgIcon('play') + ' 进入实验台</a><p class="lab-side-note">' + svgIcon('info') + (level.mode === 'asm' ? ' 汇编实验台直接在浏览器里运行，不需要面包板。' : (level.homework ? ' 这是文档里的正式作业；画布为空，按要求自己搭建并提交。' : ' 参考练习的元件已摆好但导线断开；终验关没有零件。完成任务卡后自动记录。')) + '</p>' + (level.mode === 'asm' ? '' : '<button class="btn ghost block" data-lab-guide="' + level.id + '">' + svgIcon('keyboard') + ' 在弹窗中查看步骤</button>') + '</div>' +
       '<div class="lab-side-card"><div class="lab-side-label">实验材料</div>' + labPartsHtml(level) + '</div>' +
       '<div class="lab-side-card source"><div class="lab-side-label">来源</div><p>' + esc(track.course) + '</p><b>' + esc(track.source) + '</b><span class="lab-source-note">按课程 Lab 内容改编为可交互关卡</span></div>' +
       '</aside></div></div>' + footerHTML();

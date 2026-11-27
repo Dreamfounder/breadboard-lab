@@ -2495,13 +2495,13 @@
     const s = E.clone(this.scene);
     const switches = s.components.filter((c) => c.type === 'slide-switch').slice(0, 2);
     if (switches.length < 2) return { ok: false, hint: '先放两个输入开关，并把 A/B 接到五片芯片。' };
-    const chips = s.components.filter((c) => ['ic74hc00', 'ic74hc04', 'ic74hc08', 'ic74hc86', 'ic74hc32'].includes(c.type));
+    const chips = s.components.filter((c) => ['ic74hc20', 'ic74hc04', 'ic74hc21', 'ic74hc86', 'ic74hc32'].includes(c.type));
     if (!chips.length) return { ok: false, hint: '还没有放五片门芯片。' };
-    const outPin = { ic74hc00: '3', ic74hc04: '2', ic74hc08: '3', ic74hc86: '3', ic74hc32: '3' };
+    const outPin = { ic74hc20: '6', ic74hc04: '2', ic74hc21: '6', ic74hc86: '3', ic74hc32: '3' };
     const expected = {
-      ic74hc00: [[1, 1, 1, 0]],
+      ic74hc20: [[1, 1, 1, 0]],
       ic74hc04: [[1, 1, 0, 0], [1, 0, 1, 0]],
-      ic74hc08: [[0, 0, 0, 1]],
+      ic74hc21: [[0, 0, 0, 1]],
       ic74hc86: [[0, 1, 1, 0]],
       ic74hc32: [[0, 1, 1, 1]]
     };
@@ -2520,10 +2520,10 @@
       if (!expected[chip.type].some((want) => got.join('') === want.join(''))) failed.push({ type: chip.type, got: got.join('') });
     }
     if (failed.length) {
-      const names = { ic74hc00: '74HC00 NAND', ic74hc04: '74HC04 NOT', ic74hc08: '74HC08 AND', ic74hc86: '74HC86 XOR', ic74hc32: '74HC32 OR' };
+      const names = { ic74hc20: '74HC20 NAND', ic74hc04: '74HC04 NOT', ic74hc21: '74HC21 AND', ic74hc86: '74HC86 XOR', ic74hc32: '74HC32 OR' };
       return {
         ok: false,
-        hint: failed.map((f) => names[f.type]).join('、') + ' 的输出规律不对：检查 A/B 是否同时送到每片输入、NOT 是否只用 A，以及输出是否取自 1Y。'
+        hint: failed.map((f) => names[f.type]).join('、') + ' 的输出规律不对：检查 A/B 是否同时送到每片输入、20/21 的 C/D 是否接高、NOT 是否只用 A，以及输出脚。'
       };
     }
     return { ok: true, hint: '' };
@@ -2666,7 +2666,7 @@
             if (this.taskId === 'lab02-final') {
               return hasSource && has('ic74hc86') && has('ic74hc08') && has('ic74hc32') && switches >= 3 && resistors >= 2 && leds >= 2;
             }
-            return hasSource && ['ic74hc00', 'ic74hc04', 'ic74hc08', 'ic74hc86', 'ic74hc32'].every((t) => has(t)) && switches >= 2 && resistors >= 5 && leds >= 5;
+            return hasSource && ['ic74hc20', 'ic74hc04', 'ic74hc21', 'ic74hc86', 'ic74hc32'].every((t) => has(t)) && switches >= 2 && resistors >= 5 && leds >= 5;
           }
           case 'lab-path': {
             const r = comps.find((c) => c.type === 'resistor');
@@ -2706,9 +2706,9 @@
           }
           case 'lab-output': {
             let ok = false;
-            if (this.labId === 'lab01-nand') ok = outPathOk('ic1', '3', 'r1', 'led1');
+            if (this.labId === 'lab01-nand') ok = outPathOk('ic1', '6', 'r1', 'led1');
             else if (this.labId === 'lab01-not') ok = outPathOk('ic1', '2', 'r1', 'led1');
-            else if (this.labId === 'lab01-and') ok = outPathOk('ic1', '3', 'r1', 'led1');
+            else if (this.labId === 'lab01-and') ok = outPathOk('ic1', '6', 'r1', 'led1');
             else if (this.labId === 'lab01-xor' || this.labId === 'lab01-or') ok = outPathOk('ic1', '3', 'r1', 'led1');
             else if (this.labId === 'lab02-half') ok = outPathOk('xor1', '3', 'r1', 'led1') && outPathOk('and1', '3', 'r2', 'led2');
             else if (this.labId === 'lab02-full') ok = outPathOk('xor1', '6', 'rSum', 'ledSum') && outPathOk('or1', '3', 'rCout', 'ledCout');
@@ -2728,7 +2728,11 @@
             return !!(this.simRunning && check.ok);
           }
           case 'co-power': return !!(rr.components.ic1 && rr.components.ic1.powered);
-          case 'hw-parts': return comps.length >= 3;
+          case 'hw-parts':
+            if (this.taskId === 'lab01-hw') {
+              return ['ic74hc20', 'ic74hc04', 'ic74hc21', 'ic74hc86', 'ic74hc32'].every((t) => s.components.some((c) => c.type === t));
+            }
+            return comps.length >= 3;
           case 'hw-wired': return s.wires.length >= 6;
           case 'hw-run': return !!this.simRunning;
           case 'hw-submit': return !!s.hwSubmitted;
@@ -2781,8 +2785,8 @@
     if (!issues.length) {
       issues.push((this.labCheck && this.labCheck.hint) || '接线路径看起来通了，但输出组合还没全部对上。');
       const pinHints = {
-        'lab01-nand': '74HC00 的 1Y 是第 3 脚。',
-        'lab01-and': '74HC08 的 1Y 是第 3 脚。',
+        'lab01-nand': '74HC20 的 1Y 是第 6 脚；第 3 脚是 NC。',
+        'lab01-and': '74HC21 的 1Y 是第 6 脚；第 3 脚是 NC。',
         'lab01-not': '74HC04 的 1Y 是第 2 脚。',
         'lab01-xor': '74HC86 的 1Y 是第 3 脚。',
         'lab01-or': '74HC32 的 1Y 是第 3 脚。'

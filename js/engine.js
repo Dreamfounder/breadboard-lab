@@ -534,9 +534,9 @@
     s.wires = [];
     return s;
   };
-  Templates['lab01-nand'] = function () { return labChipDemo('ic74hc00', 'Lab 01 · 74HC00 NAND', 'lab01-nand', { ledColor: 'red' }); };
+  Templates['lab01-nand'] = function () { return labChipDemo('ic74hc20', 'Lab 01 · 74HC20 NAND', 'lab01-nand', { fourInput: true, ledColor: 'red' }); };
   Templates['lab01-not'] = function () { return labChipDemo('ic74hc04', 'Lab 01 · 74HC04 NOT', 'lab01-not', { oneInput: true, ledColor: 'green' }); };
-  Templates['lab01-and'] = function () { return labChipDemo('ic74hc08', 'Lab 01 · 74HC08 AND', 'lab01-and', { ledColor: 'green' }); };
+  Templates['lab01-and'] = function () { return labChipDemo('ic74hc21', 'Lab 01 · 74HC21 AND', 'lab01-and', { fourInput: true, ledColor: 'green' }); };
   Templates['lab01-xor'] = function () { return labChipDemo('ic74hc86', 'Lab 01 · 74HC86 XOR', 'lab01-xor', { ledColor: 'yellow' }); };
   Templates['lab01-or'] = function () { return labChipDemo('ic74hc32', 'Lab 01 · 74HC32 OR', 'lab01-or', { ledColor: 'green' }); };
 
@@ -1646,12 +1646,12 @@
     },
     'lab01-nand': {
       kicker: 'Lab 01 · 关卡 02',
-      title: '74HC00 · NAND',
-      summary: '芯片、开关、电阻和 LED 都已就位，但一根线都没接。按提示自己完成。',
+      title: '74HC20 · NAND',
+      summary: '4 输入 NAND 芯片已就位，但导线全部断开；先把 C/D 接高，再接 A/B 与输出。',
       steps: [
-        { key: 'lab-power', text: '把 74HC00 的第 14 脚接 V+、第 7 脚接 GND' },
-        { key: 'lab-inputs', text: '把 A/B 开关分别接到第 1、2 脚' },
-        { key: 'lab-output', text: '把输出脚经 1kΩ 接 LED，LED 阴极回 GND' },
+        { key: 'lab-power', text: '把 74HC20 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: '把第 4 脚 1C、第 5 脚 1D 接高电平，再把 A/B 开关接到第 1、2 脚' },
+        { key: 'lab-output', text: '把第 6 脚 1Y 经 1kΩ 接 LED，LED 阴极回 GND' },
         { key: 'lab-correct', text: '运行仿真，切换 A/B，自己观察并记录输出' }
       ],
       success: '电路开始响应了。回到关卡页，把真值表自己填完，再用“检查我的真值表”验证。'
@@ -1670,12 +1670,12 @@
     },
     'lab01-and': {
       kicker: 'Lab 01 · 关卡 04',
-      title: '74HC08 · AND',
-      summary: '先接电源和输入，再验证两个输入都为 1 时输出才为 1。',
+      title: '74HC21 · AND',
+      summary: '4 输入 AND 芯片已就位；把 C/D 接高，再接 A/B 和输出。',
       steps: [
-        { key: 'lab-power', text: '把 74HC08 的第 14 脚接 V+、第 7 脚接 GND' },
-        { key: 'lab-inputs', text: '把 A/B 开关分别接到第 1、2 脚' },
-        { key: 'lab-output', text: '把输出脚经 1kΩ 接 LED，LED 阴极回 GND' },
+        { key: 'lab-power', text: '把 74HC21 的第 14 脚接 V+、第 7 脚接 GND' },
+        { key: 'lab-inputs', text: '把第 4 脚 1C、第 5 脚 1D 接高电平，再把 A/B 开关接到第 1、2 脚' },
+        { key: 'lab-output', text: '把第 6 脚 1Y 经 1kΩ 接 LED，LED 阴极回 GND' },
         { key: 'lab-correct', text: '运行仿真，切换 A/B，记录输出' }
       ],
       success: '接线完成，AND 已经开始响应。回到关卡页，自己补完真值表。'
@@ -1735,7 +1735,7 @@
       steps: [
         { key: 'lab-final-parts', text: '从元件库放置五片 Lab 01 芯片、2 个开关、5 个 1kΩ、5 个 LED 和电源' },
         { key: 'lab-power', text: '给五片芯片都接好电源，逐片检查是否真的通电' },
-        { key: 'lab-inputs', text: '接好共享输入；五片芯片都只需 A/B 两个输入' },
+        { key: 'lab-inputs', text: '接好共享 A/B 输入；74HC20/21 的 C/D 还要接高电平' },
         { key: 'lab-output', text: '每片输出都经 1kΩ 接 LED，并让 LED 阴极回到 GND' },
         { key: 'lab-correct', text: '运行仿真，逐片验证并填完五张真值表' }
       ],
@@ -1809,26 +1809,15 @@
       success: '比较器工作正常：三根输出线同一时刻只有一根为高。'
     },
     'lab01-hw': {
-      kicker: 'Lab 01 · 作业', title: '用 NAND 搭基本门',
-      summary: '开放式作业：只允许用 74HC00 的 NAND 门，搭出 NOT 和 AND，并提交电路与验证记录。',
+      kicker: 'Lab 01 · 作业', title: '五片 IC 真值表与电路图',
+      summary: '按 Lab 01 文档的 Assignment：完成 74HC20/04/21/86/32 的输出列，并为每种逻辑提交一张电路图。',
       steps: [
-        { key: 'hw-parts', text: '从元件库放置 74HC00、电源、开关、电阻和 LED' },
-        { key: 'hw-wired', text: '按作业要求自己设计接线：NOT 用 1 个 NAND，AND 用 2 个 NAND' },
-        { key: 'hw-run', text: '运行仿真，逐个输入组合确认结果' },
-        { key: 'hw-submit', text: '确认作业完成后，点击“提交作业”' }
+        { key: 'hw-parts', text: '从元件库放置 74HC20、74HC04、74HC21、74HC86、74HC32、电源、开关、电阻和 LED' },
+        { key: 'hw-wired', text: '分别给五片 IC 接电、接输入和输出；20/21 的 C/D 接高' },
+        { key: 'hw-run', text: '运行仿真，逐片切换 A/B 的四种组合' },
+        { key: 'hw-submit', text: '填完五张真值表并准备好电路图后，点击“提交作业”' }
       ],
-      success: 'Lab 01 作业已提交。保留电路图、真值表和截图作为作业附件。'
-    },
-    'lab02-hw': {
-      kicker: 'Lab 02 · 作业', title: '2 位比较器设计',
-      summary: '开放式作业：用 Lab 02 学过的 74HC86/08/32 设计 2 位比较器，输出 A>B、A=B、A<B。',
-      steps: [
-        { key: 'hw-parts', text: '从元件库放置 74HC86、74HC08、74HC32、电源、开关和 LED' },
-        { key: 'hw-wired', text: '按自己的方案接线：先比较高位，再处理低位和相等情况' },
-        { key: 'hw-run', text: '运行仿真，验证 3<5、5=5、9>4 等组合' },
-        { key: 'hw-submit', text: '确认作业完成后，点击“提交作业”' }
-      ],
-      success: 'Lab 02 作业已提交。保留比较器电路图、真值表和测试截图。'
+      success: 'Lab 01 作业已提交。保留五张真值表、五张逻辑电路图和观察报告。'
     }
   };
 
