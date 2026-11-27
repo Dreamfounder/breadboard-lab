@@ -2474,11 +2474,11 @@
     if (!chips.length) return { ok: false, hint: '还没有放五片门芯片。' };
     const outPin = { ic74hc00: '3', ic74hc04: '2', ic74hc08: '3', ic74hc86: '3', ic74hc32: '3' };
     const expected = {
-      ic74hc00: [1, 1, 1, 0],
-      ic74hc04: [1, 1, 0, 0],
-      ic74hc08: [0, 0, 0, 1],
-      ic74hc86: [0, 1, 1, 0],
-      ic74hc32: [0, 1, 1, 1]
+      ic74hc00: [[1, 1, 1, 0]],
+      ic74hc04: [[1, 1, 0, 0], [1, 0, 1, 0]],
+      ic74hc08: [[0, 0, 0, 1]],
+      ic74hc86: [[0, 1, 1, 0]],
+      ic74hc32: [[0, 1, 1, 1]]
     };
     const failed = [];
     for (const chip of chips) {
@@ -2492,7 +2492,7 @@
         const p = r.pins[chip.id] && r.pins[chip.id][pin];
         got.push(p && p.voltage > 1.5 ? 1 : 0);
       }
-      if (got.join('') !== expected[chip.type].join('')) failed.push({ type: chip.type, got: got.join('') });
+      if (!expected[chip.type].some((want) => got.join('') === want.join(''))) failed.push({ type: chip.type, got: got.join('') });
     }
     if (failed.length) {
       const names = { ic74hc00: '74HC00 NAND', ic74hc04: '74HC04 NOT', ic74hc08: '74HC08 AND', ic74hc86: '74HC86 XOR', ic74hc32: '74HC32 OR' };
