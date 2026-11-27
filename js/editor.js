@@ -162,6 +162,8 @@
       }
     }
     this.scene._holes = E.boardHoles(this.scene.board);
+    this.clampScene();
+    this.clampScene();
     if (this.scene.code) {
       if (this.scene.code.exampleId) this.codeExampleId = this.scene.code.exampleId;
       if (this.scene.code.text) this.codeText = this.scene.code.text;
@@ -736,6 +738,7 @@
     this.scene.name = this.mode === 'sandbox' ? '自由实验 · LED 示例' : '实验一 · 点亮第一颗 LED';
     this.scene.template = this.mode === 'editor' ? 'led-basic' : null;
     this.scene._holes = E.boardHoles(this.scene.board);
+    this.clampScene();
     this.selection = null;
     this.taskId = this.mode === 'editor' ? 'led-basic' : null;
     this.taskDoneShown = false;
@@ -1251,6 +1254,22 @@
     this.$searchClear.classList.toggle('show', !!q);
   };
 
+  Editor.prototype.clampComponent = function (comp) {
+    const b = this.scene && this.scene.board;
+    if (!b || !comp || !E.DEFS[comp.type]) return;
+    const supply = /power-supply|battery|coin-cell/.test(comp.type);
+    const minX = supply ? Math.min(0, b.x - 80) : b.x + 12;
+    const maxX = b.x + b.w - 12;
+    const minY = b.y + 18;
+    const maxY = b.y + b.h - 14;
+    comp.x = Math.max(minX, Math.min(maxX, Number(comp.x) || 0));
+    comp.y = Math.max(minY, Math.min(maxY, Number(comp.y) || 0));
+  };
+
+  Editor.prototype.clampScene = function () {
+    (this.scene.components || []).forEach((c) => this.clampComponent(c));
+  };
+
   Editor.prototype.addPart = function (type, x, y, opts) {
     if (type === 'breadboard') { this.toast('画布中已经有一块 830 孔面包板了。', 'info'); return; }
     if (!E.DEFS[type]) return;
@@ -1263,6 +1282,7 @@
         // keep freely dropped
       }
     }
+    this.clampComponent(comp);
     this.scene.components.push(comp);
     this.selection = { kind: 'comp', id: comp.id };
     this.tab = 'inspector';
@@ -1734,6 +1754,7 @@
       const wdx = dx / this.view.zoom, wdy = dy / this.view.zoom;
       d.comp.x = Math.round((d.originX + wdx) * 100) / 100;
       d.comp.y = Math.round((d.originY + wdy) * 100) / 100;
+      this.clampComponent(d.comp);
       this.renderComponents();
       this.renderWires();
       this.updateStatus();
@@ -3037,6 +3058,7 @@
   Editor.prototype.restoreHistory = function () {
     this.scene = E.clone(this.history[this.hIndex]);
     this.scene._holes = E.boardHoles(this.scene.board);
+    this.clampScene();
     this.setTaskForTemplate(this.scene.template);
     this.selection = null;
     this.pending = null;
@@ -3220,6 +3242,7 @@
     this.stopSimulation();
     this.scene = E.clone(design.scene);
     this.scene._holes = E.boardHoles(this.scene.board);
+    this.clampScene();
     this.scene.name = design.name;
     this.selection = null;
     this.pending = null;
@@ -3271,6 +3294,7 @@
           if (!data || !Array.isArray(data.components) || !Array.isArray(data.wires) || !data.board) throw new Error('文件格式不正确');
           this.scene = data;
           this.scene._holes = E.boardHoles(this.scene.board);
+    this.clampScene();
           this.selection = null;
           this.pending = null;
           this.stopSimulation();
@@ -3299,6 +3323,7 @@
       const template = this.scene.template || 'led-basic';
       this.scene = E.createScene(template === 'blank' ? (this.mode === 'sandbox' ? 'free-start' : 'led-basic') : template);
       this.scene._holes = E.boardHoles(this.scene.board);
+    this.clampScene();
       this.selection = null;
       this.taskDoneShown = false;
       this.stopSimulation();
@@ -3322,6 +3347,7 @@
       s.template = this.mode === 'sandbox' ? 'blank' : null;
       this.scene = s;
       this.scene._holes = E.boardHoles(this.scene.board);
+    this.clampScene();
       this.selection = null;
       this.stopSimulation();
       this.taskId = null;
