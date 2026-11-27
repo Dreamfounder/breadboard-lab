@@ -1012,60 +1012,43 @@
     const dx = b.x - a.x, dy = b.y - a.y;
     const dist = Math.max(1, Math.hypot(dx, dy));
     const n = Number(seed) || 0;
-    if (dist < 34 && Math.abs(dy) < 24) {
-      const lift = 8 + (Math.abs(n) % 3) * 2;
-      const cy = Math.min(a.y, b.y) - lift;
-      return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' C' + a.x.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
-    }
-    const rects = (obstacles || []).map((o) => ({
-      x: o.x - 14, y: o.y - 14, w: o.w + 28, h: o.h + 28
-    }));
+    const bend = ((n % 9) - 4);
     const minY = Math.min(a.y, b.y), maxY = Math.max(a.y, b.y);
-    const minX = Math.min(a.x, b.x) - 10, maxX = Math.max(a.x, b.x) + 10;
-    if (this.segmentClear(a, b, rects)) {
-      const lift = Math.min(18, 8 + dist * 0.03) + (Math.abs(n) % 5) * 1.2;
-      const cy = Math.min(a.y, b.y) - lift;
-      const sway = ((Math.abs(n) % 7) - 3) * 1.3;
-      const c1 = { x: a.x + dx * 0.28 + sway, y: cy };
-      const c2 = { x: b.x - dx * 0.28 + sway, y: cy };
-      if (this.cubicClear(a, c1, c2, b, rects)) {
-        return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) +
-          ' C' + c1.x.toFixed(2) + ' ' + c1.y.toFixed(2) + ' ' + c2.x.toFixed(2) + ' ' + c2.y.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
-      }
-    }
+    const minX = Math.min(a.x, b.x) - 6, maxX = Math.max(a.x, b.x) + 6;
     let top = Infinity, bottom = -Infinity;
-    rects.forEach((o) => {
+    (obstacles || []).forEach((o) => {
       if (o.x < maxX && o.x + o.w > minX) {
         top = Math.min(top, o.y);
         bottom = Math.max(bottom, o.y + o.h);
       }
     });
-    const aboveLift = top === Infinity ? 18 : Math.max(18, minY - top + 18);
-    const belowLift = bottom === -Infinity ? 18 : Math.max(18, bottom - maxY + 18);
-    const sides = aboveLift <= belowLift ? [-1, 1] : [1, -1];
+    const aboveLift = top === Infinity ? Math.max(12, 14 + dist * 0.035) : Math.max(16, minY - top + 16);
+    const belowLift = bottom === -Infinity ? Math.max(12, 14 + dist * 0.035) : Math.max(16, bottom - maxY + 16);
+    const boardMid = this.scene && this.scene.board ? this.scene.board.y + this.scene.board.h * 0.52 : 440;
+    const preferBelow = a.y > boardMid && b.y > boardMid && Math.abs(dx) < 180;
+    const sides = preferBelow ? [1, -1] : [-1, 1];
     for (const side of sides) {
       const base = side < 0 ? aboveLift : belowLift;
       for (let extra = 0; extra < 4; extra++) {
-        const apex = side < 0 ? minY - base - extra * 11 : maxY + base + extra * 11;
-        const sway = ((Math.abs(n) % 7) - 3) * 2 + side * 2;
-        const c1 = { x: a.x + dx * 0.28 + sway, y: apex };
-        const c2 = { x: b.x - dx * 0.28 + sway, y: apex };
-        if (this.cubicClear(a, c1, c2, b, rects)) {
-          return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) +
-            ' C' + c1.x.toFixed(2) + ' ' + c1.y.toFixed(2) + ' ' + c2.x.toFixed(2) + ' ' + c2.y.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
+        const cy = side < 0 ? minY - base - extra * 10 : maxY + base + extra * 10;
+        const sway = bend * 2.2;
+        const x1 = a.x + dx * 0.24 + sway;
+        const x2 = b.x - dx * 0.24 + sway;
+        if (this.cubicClear(a, { x: x1, y: cy }, { x: x2, y: cy }, b, obstacles || [])) {
+          return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
         }
       }
     }
-    const route = this.routeAround(a, b, rects);
-    if (route && route.length > 2) {
-      const clean = route.filter((p, i) => i === 0 || Math.hypot(p.x - route[i - 1].x, p.y - route[i - 1].y) > 2);
-      if (clean.length > 2) return this.curvePath(this.chaikin(clean, 2), 0.22);
+    // Fallback to the original single high arc.
+    let lift = Math.min(52, 16 + dist * 0.065) + bend * 3;
+    let cy = Math.min(a.y, b.y) - lift;
+    if (obstacles && obstacles.length && !this.segmentClear(a, b, obstacles)) {
+      if (top !== Infinity) cy = Math.min(cy, top - 22);
     }
-    // Last resort: a controlled arc above every obstacle in this x range.
-    const cy = Math.min(a.y, b.y, top === Infinity ? Infinity : top - 18) - 14 - (Math.abs(n) % 4) * 3;
-    const bend = ((Math.abs(n) % 5) - 2) * 2;
-    return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) +
-      ' C' + (a.x + dx * .26 + bend).toFixed(2) + ' ' + cy.toFixed(2) + ' ' + (b.x - dx * .26 + bend).toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
+    const sway = bend * 2.2;
+    const x1 = a.x + dx * 0.24 + sway;
+    const x2 = b.x - dx * 0.24 + sway;
+    return 'M' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ' C' + x1.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + x2.toFixed(2) + ' ' + cy.toFixed(2) + ' ' + b.x.toFixed(2) + ' ' + b.y.toFixed(2);
   };
 
   Editor.prototype.wireRouteSeed = function (w) {
